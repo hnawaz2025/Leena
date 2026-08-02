@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String     @id @default(uuid())
+  deviceId       String     @unique
+  authToken      String     @unique
+  nativeLanguage String
+  targetLanguage String
+  createdAt      DateTime   @default(now())
+  documents      Document[]
+  scenarios      Scenario[]
+  sessions       Session[]
+}
+
+model Document {
+  id            String     @id @default(uuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String
+  extractedText String
+  storageUrl    String?
+  createdAt     DateTime   @default(now())
+  scenarios     Scenario[]
+
+  @@index([userId])
+}
+
+model Scenario {
+  id                 String    @id @default(uuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId         String?
+  document           Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  title              String
+  personaDescription String
+  contextSummary     String
+  language           String
+  createdAt          DateTime  @default(now())
+  sessions           Session[]
+
+  @@index([userId])
+  @@index([documentId])
+}
+
+model Session {
+  id          String          @id @default(uuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenarioId  String
+  scenario    Scenario        @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  startedAt   DateTime        @default(now())
+  endedAt     DateTime?
+  status      String          @default("active")
+  turns       Turn[]
+  feedback    FeedbackReport?
+
+  @@index([userId])
+  @@index([scenarioId])
+}
+
+model Turn {
+  id        String   @id @default(uuid())
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  speaker   String
+  text      String
+  audioUrl  String?
+  language  String
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+}
+
+model FeedbackReport {
+  id                    String   @id @default(uuid())
+  sessionId             String   @unique
+  session               Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  summary               String
+  struggleAreas         Json
+  vocabularySuggestions Json
+  createdAt             DateTime @default(now())
+}
