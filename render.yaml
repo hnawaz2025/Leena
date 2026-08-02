@@ -19,10 +19,12 @@ services:
           name: leena-db
           property: connectionString
       - key: AI_LLM_PROVIDER
-        value: anthropic
+        value: featherless
+      - key: FEATHERLESS_MODEL
+        value: zai-org/GLM-4-9B-0414
+      - key: FEATHERLESS_API_KEY
+        sync: false
       - key: AI_SPEECH_PROVIDER
         value: openai
-      - key: ANTHROPIC_API_KEY
-        sync: false
       - key: OPENAI_API_KEY
         sync: false

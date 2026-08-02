@@ -2,7 +2,7 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import morgan from "morgan";
-import { getLLMProvider, getSpeechProvider } from "./ai";
+import { getLLMProvider } from "./ai";
 import { prisma } from "./db";
 import { loadEnv } from "./env";
 import { errorHandler } from "./middleware/errorHandler";
@@ -13,10 +13,11 @@ import { usersRouter } from "./routes/users";
 
 const env = loadEnv();
 
-// Fail fast on a broken deploy (missing/invalid provider config) instead of
-// looking "up" via /health and then 500ing on the first real request.
+// Fail fast on a broken deploy (missing/invalid LLM config) instead of
+// looking "up" via /health and then 500ing on the first real request. The
+// speech provider isn't checked here: nothing calls it yet (voice is a
+// planned milestone), so it validates lazily the first time it's actually used.
 getLLMProvider();
-getSpeechProvider();
 
 const app = express();
 app.use(cors());

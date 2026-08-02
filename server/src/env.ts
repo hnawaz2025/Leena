@@ -6,7 +6,11 @@ const baseSchema = z.object({
   AI_LLM_PROVIDER: z.enum(["anthropic", "featherless"]).default("anthropic"),
   AI_SPEECH_PROVIDER: z.enum(["openai"]).default("openai"),
   ANTHROPIC_API_KEY: z.string().optional(),
-  OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
+  // Not required at boot: nothing calls the speech provider yet (voice is a
+  // planned milestone, not built). It's validated lazily by getSpeechProvider()
+  // itself, so it'll fail loudly the moment a route actually needs it instead
+  // of blocking the whole server from starting today.
+  OPENAI_API_KEY: z.string().optional(),
   FEATHERLESS_API_KEY: z.string().optional(),
   FEATHERLESS_MODEL: z.string().optional(),
 });
