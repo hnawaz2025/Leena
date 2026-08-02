@@ -1,4 +1,5 @@
 import { AnthropicLLMProvider } from "./providers/anthropicLLMProvider";
+import { FeatherlessLLMProvider } from "./providers/featherlessLLMProvider";
 import { OpenAISpeechProvider } from "./providers/openaiSpeechProvider";
 import type { LLMProvider, SpeechProvider } from "./types";
 
@@ -16,6 +17,14 @@ export function getLLMProvider(): LLMProvider {
       const apiKey = process.env.ANTHROPIC_API_KEY;
       if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
       llmProvider = new AnthropicLLMProvider(apiKey);
+      return llmProvider;
+    }
+    case "featherless": {
+      const apiKey = process.env.FEATHERLESS_API_KEY;
+      const model = process.env.FEATHERLESS_MODEL;
+      if (!apiKey) throw new Error("FEATHERLESS_API_KEY is not set");
+      if (!model) throw new Error("FEATHERLESS_MODEL is not set");
+      llmProvider = new FeatherlessLLMProvider(apiKey, model);
       return llmProvider;
     }
     default:

@@ -1,12 +1,41 @@
 import { z } from "zod";
 
-const envSchema = z.object({
+const baseSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   PORT: z.string().optional(),
-  AI_LLM_PROVIDER: z.enum(["anthropic"]).default("anthropic"),
+  AI_LLM_PROVIDER: z.enum(["anthropic", "featherless"]).default("anthropic"),
   AI_SPEECH_PROVIDER: z.enum(["openai"]).default("openai"),
-  ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
+  ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
+  FEATHERLESS_API_KEY: z.string().optional(),
+  FEATHERLESS_MODEL: z.string().optional(),
+});
+
+const envSchema = baseSchema.superRefine((env, ctx) => {
+  if (env.AI_LLM_PROVIDER === "anthropic" && !env.ANTHROPIC_API_KEY) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["ANTHROPIC_API_KEY"],
+      message: "ANTHROPIC_API_KEY is required when AI_LLM_PROVIDER=anthropic",
+    });
+  }
+  if (env.AI_LLM_PROVIDER === "featherless") {
+    if (!env.FEATHERLESS_API_KEY) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["FEATHERLESS_API_KEY"],
+        message: "FEATHERLESS_API_KEY is required when AI_LLM_PROVIDER=featherless",
+      });
+    }
+    if (!env.FEATHERLESS_MODEL) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["FEATHERLESS_MODEL"],
+        message:
+          "FEATHERLESS_MODEL is required when AI_LLM_PROVIDER=featherless (e.g. a DeepSeek model id from your Featherless dashboard). Check that model's concurrency-unit cost before using it in a live demo.",
+      });
+    }
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;

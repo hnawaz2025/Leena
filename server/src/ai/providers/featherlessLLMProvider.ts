@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { callForJson } from "../jsonRetry";
 import { analyzeSessionResultSchema, generatedScenarioSchema } from "../schemas";
 import type {
@@ -11,19 +11,26 @@ import type {
   LLMProvider,
 } from "../types";
 
-const MODEL = "claude-sonnet-5";
-
 // A long conversation grows the prompt (and cost) on every single turn if we
-// send the whole history. This caps what's sent while keeping enough context
-// for the persona to stay consistent within a normal-length practice session.
+// send the whole history. This also matters more here than on Anthropic:
+// Featherless's Chat plan caps context at 32K tokens.
 const MAX_HISTORY_TURNS_FOR_CHAT = 16;
-const MAX_TRANSCRIPT_TURNS_FOR_ANALYSIS = 60;
+const MAX_TRANSCRIPT_TURNS_FOR_ANALYSIS = 40;
 
-export class AnthropicLLMProvider implements LLMProvider {
-  private client: Anthropic;
+// Featherless (https://featherless.ai) proxies 40,000+ open-weight models
+// (DeepSeek, Kimi, GLM, GPT-OSS, ...) behind an OpenAI-compatible API. The
+// exact model id (e.g. "deepseek-ai/DeepSeek-R1-0528") and its concurrency
+// cost are chosen by FEATHERLESS_MODEL rather than hardcoded here, since
+// larger models consume more of the plan's limited concurrent request units
+// -- check the model's page on Featherless's dashboard before picking one for
+// a live demo.
+export class FeatherlessLLMProvider implements LLMProvider {
+  private client: OpenAI;
+  private model: string;
 
-  constructor(apiKey: string) {
-    this.client = new Anthropic({ apiKey });
+  constructor(apiKey: string, model: string) {
+    this.client = new OpenAI({ apiKey, baseURL: "https://api.featherless.ai/v1" });
+    this.model = model;
   }
 
   async generateScenario(input: GenerateScenarioInput): Promise<GeneratedScenario> {
@@ -36,12 +43,12 @@ Return ONLY a JSON object with keys: title, personaDescription (who the AI will 
 ${correctionNote ? `\n${correctionNote}` : ""}`;
 
     return callForJson(generatedScenarioSchema, async (correctionNote) => {
-      const response = await this.client.messages.create({
-        model: MODEL,
+      const response = await this.client.chat.completions.create({
+        model: this.model,
         max_tokens: 1024,
         messages: [{ role: "user", content: buildPrompt(correctionNote) }],
       });
-      return response.content.find((b) => b.type === "text")?.text ?? "";
+      return response.choices[0]?.message?.content ?? "";
     });
   }
 
@@ -52,11 +59,11 @@ Speak only in ${input.targetLanguage}. Stay in character. Keep responses short a
 
     const recentHistory = input.history.slice(-MAX_HISTORY_TURNS_FOR_CHAT);
 
-    const response = await this.client.messages.create({
-      model: MODEL,
+    const response = await this.client.chat.completions.create({
+      model: this.model,
       max_tokens: 300,
-      system: systemPrompt,
       messages: [
+        { role: "system", content: systemPrompt },
         ...recentHistory.map((turn) => ({
           role: turn.speaker === "user" ? ("user" as const) : ("assistant" as const),
           content: turn.text,
@@ -65,7 +72,7 @@ Speak only in ${input.targetLanguage}. Stay in character. Keep responses short a
       ],
     });
 
-    const text = response.content.find((b) => b.type === "text")?.text ?? "";
+    const text = response.choices[0]?.message?.content ?? "";
     if (!text.trim()) {
       throw new Error("AI returned an empty response for chatTurn");
     }
@@ -87,12 +94,12 @@ summary (2-3 sentence coaching summary), struggleAreas (array of short strings d
 ${correctionNote ? `\n${correctionNote}` : ""}`;
 
     return callForJson(analyzeSessionResultSchema, async (correctionNote) => {
-      const response = await this.client.messages.create({
-        model: MODEL,
+      const response = await this.client.chat.completions.create({
+        model: this.model,
         max_tokens: 2048,
         messages: [{ role: "user", content: buildPrompt(correctionNote) }],
       });
-      return response.content.find((b) => b.type === "text")?.text ?? "";
+      return response.choices[0]?.message?.content ?? "";
     });
   }
 }
