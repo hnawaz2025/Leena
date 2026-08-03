@@ -1,5 +1,7 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
+import { LinearGradient } from "expo-linear-gradient";
+import { Drama, Mic, Send } from "lucide-react-native";
 import { useState } from "react";
 import {
   FlatList,
@@ -15,7 +17,7 @@ import { BreathingDot } from "../components/BreathingDot";
 import { ChatBubble } from "../components/ChatBubble";
 import { TextField } from "../components/TextField";
 import type { RootStackParamList } from "../navigation/types";
-import { colors, spacing, typography } from "../theme";
+import { colors, gradients, spacing, typography } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Conversation">;
 
@@ -76,9 +78,14 @@ export function ConversationScreen({ route, navigation }: Props) {
     >
       {scenario ? (
         <View style={styles.personaHeader}>
-          <View style={styles.personaAvatar}>
-            <Text style={styles.personaAvatarText}>🎭</Text>
-          </View>
+          <LinearGradient
+            colors={gradients.secondary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.personaAvatar}
+          >
+            <Drama size={18} color={colors.white} strokeWidth={2} />
+          </LinearGradient>
           <View style={styles.personaTextGroup}>
             <Text style={styles.personaTitle} numberOfLines={1}>
               {scenario.title}
@@ -106,7 +113,7 @@ export function ConversationScreen({ route, navigation }: Props) {
 
       <View style={styles.inputRow}>
         <Pressable style={styles.micButton} disabled>
-          <Text style={styles.micButtonText}>🎤</Text>
+          <Mic size={18} color={colors.textMuted} strokeWidth={2} />
         </Pressable>
         <TextField
           style={styles.input}
@@ -115,12 +122,15 @@ export function ConversationScreen({ route, navigation }: Props) {
           onChangeText={setInput}
           editable={!sending}
         />
-        <Pressable
-          style={[styles.sendButton, (sending || !input.trim()) && styles.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={sending || !input.trim()}
-        >
-          <Text style={styles.sendButtonText}>➤</Text>
+        <Pressable onPress={handleSend} disabled={sending || !input.trim()}>
+          <LinearGradient
+            colors={gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.sendButton, (sending || !input.trim()) && styles.sendButtonDisabled]}
+          >
+            <Send size={18} color={colors.white} strokeWidth={2.5} />
+          </LinearGradient>
         </Pressable>
       </View>
 
@@ -147,12 +157,10 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.surfaceWarm,
     alignItems: "center",
     justifyContent: "center",
     marginRight: spacing.md,
   },
-  personaAvatarText: { fontSize: 18 },
   personaTextGroup: { flex: 1 },
   personaTitle: { ...typography.h2, fontSize: 15 },
   personaSubtitle: { ...typography.caption },
@@ -175,9 +183,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.background,
-    opacity: 0.5,
+    opacity: 0.6,
   },
-  micButtonText: { fontSize: 18 },
   input: { flex: 1 },
   sendButton: {
     width: 44,
@@ -185,10 +192,8 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.primary,
   },
   sendButtonDisabled: { opacity: 0.4 },
-  sendButtonText: { color: colors.white, fontSize: 18, fontFamily: typography.bodyBold.fontFamily },
   endButton: { paddingVertical: spacing.md, alignItems: "center" },
   endButtonText: { ...typography.caption, color: colors.textSecondary, fontFamily: typography.bodyBold.fontFamily },
   error: { ...typography.caption, color: colors.error, textAlign: "center", marginTop: spacing.sm },

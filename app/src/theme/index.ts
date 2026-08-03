@@ -32,11 +32,16 @@ export const spacing = {
 };
 
 export const radius = {
-  input: 12,
-  button: 12,
-  card: 16,
+  input: 14,
+  button: 14,
+  card: 20,
   pill: 999,
   chatBubble: 18,
+};
+
+export const gradients = {
+  primary: [colors.primary, colors.primaryDark] as const,
+  secondary: [colors.secondaryLight, colors.secondary] as const,
 };
 
 export const fontFamily = {
@@ -48,10 +53,16 @@ export const fontFamily = {
 };
 
 export const typography = {
+  display: {
+    fontFamily: fontFamily.headingSemiBold,
+    fontSize: 34,
+    lineHeight: 40,
+    color: colors.textPrimary,
+  },
   h1: {
     fontFamily: fontFamily.headingSemiBold,
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 22,
+    lineHeight: 28,
     color: colors.textPrimary,
   },
   h2: {
@@ -87,10 +98,10 @@ export const typography = {
 
 export const shadow = {
   subtle: {
-    shadowColor: colors.textPrimary,
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
 };

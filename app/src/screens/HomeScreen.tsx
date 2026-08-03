@@ -1,10 +1,12 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
+import { Sprout } from "lucide-react-native";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { api } from "../api/client";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { EmptyState } from "../components/EmptyState";
+import { FadeInItem } from "../components/FadeInItem";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, spacing, typography } from "../theme";
 
@@ -47,39 +49,41 @@ export function HomeScreen({ navigation }: Props) {
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <EmptyState
-              icon="🌱"
+              icon={Sprout}
               message="Nothing here yet — pick a real situation above and let's rehearse it together."
             />
           }
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() =>
-                item.status === "completed"
-                  ? navigation.navigate("Feedback", { sessionId: item.id, scenarioId: item.scenarioId })
-                  : navigation.navigate("Conversation", {
-                      sessionId: item.id,
-                      targetLanguage: "English",
-                      scenarioId: item.scenarioId,
-                    })
-              }
-            >
-              <Card
-                accentColor={item.status === "completed" ? colors.success : colors.primary}
-                style={styles.card}
+          renderItem={({ item, index }) => (
+            <FadeInItem index={index}>
+              <Pressable
+                onPress={() =>
+                  item.status === "completed"
+                    ? navigation.navigate("Feedback", { sessionId: item.id, scenarioId: item.scenarioId })
+                    : navigation.navigate("Conversation", {
+                        sessionId: item.id,
+                        targetLanguage: "English",
+                        scenarioId: item.scenarioId,
+                      })
+                }
               >
-                <View style={styles.cardRow}>
-                  <View style={styles.cardTextGroup}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                      {item.scenarioTitle}
+                <Card
+                  accentColor={item.status === "completed" ? colors.success : colors.primary}
+                  style={styles.card}
+                >
+                  <View style={styles.cardRow}>
+                    <View style={styles.cardTextGroup}>
+                      <Text style={styles.cardTitle} numberOfLines={1}>
+                        {item.scenarioTitle}
+                      </Text>
+                      <Text style={styles.cardMeta}>{relativeDate(item.startedAt)}</Text>
+                    </View>
+                    <Text style={styles.cardStatus}>
+                      {item.status === "completed" ? "Done" : "In progress"}
                     </Text>
-                    <Text style={styles.cardMeta}>{relativeDate(item.startedAt)}</Text>
                   </View>
-                  <Text style={styles.cardStatus}>
-                    {item.status === "completed" ? "Done" : "In progress"}
-                  </Text>
-                </View>
-              </Card>
-            </Pressable>
+                </Card>
+              </Pressable>
+            </FadeInItem>
           )}
           onEndReachedThreshold={0.5}
         />
@@ -90,7 +94,7 @@ export function HomeScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: spacing.xl, backgroundColor: colors.background },
-  title: { ...typography.h1, marginBottom: spacing.lg },
+  title: { ...typography.display, marginBottom: spacing.lg },
   newButton: { marginBottom: spacing.xxl },
   sectionLabel: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.textSecondary, marginBottom: spacing.md },
   loading: { ...typography.body, color: colors.textMuted, textAlign: "center", marginTop: spacing.xxxl },

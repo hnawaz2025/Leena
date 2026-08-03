@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xl, paddingBottom: spacing.xxxl },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, backgroundColor: colors.background },
   loadingText: { ...typography.body, color: colors.textSecondary, textAlign: "center", marginTop: spacing.lg },
-  title: { ...typography.h1, fontSize: 22, marginBottom: spacing.md },
+  title: { ...typography.h1, marginBottom: spacing.md },
   summary: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg },
   statStrip: { flexDirection: "row", alignItems: "center", marginBottom: spacing.xl, gap: spacing.sm },
   statText: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.primaryDark },

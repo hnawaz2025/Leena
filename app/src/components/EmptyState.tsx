@@ -1,15 +1,16 @@
+import type { LucideIcon } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
-import { spacing, typography } from "../theme";
+import { colors, spacing, typography } from "../theme";
 
 interface EmptyStateProps {
-  icon: string;
+  icon: LucideIcon;
   message: string;
 }
 
-export function EmptyState({ icon, message }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, message }: EmptyStateProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.icon}>{icon}</Text>
+      <Icon size={36} color={colors.textMuted} strokeWidth={1.5} style={styles.icon} />
       <Text style={styles.message}>{message}</Text>
     </View>
   );
@@ -22,7 +23,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   icon: {
-    fontSize: 40,
     marginBottom: spacing.md,
   },
   message: {

@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { api } from "../api/client";
 import { Button } from "../components/Button";
 import { Chip } from "../components/Chip";
@@ -54,7 +54,11 @@ export function OnboardingScreen({ navigation }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.emoji}>💬</Text>
+      <Image
+        source={require("../../assets/splash-icon.png")}
+        style={styles.heroIcon}
+        resizeMode="contain"
+      />
       <Text style={styles.title}>Welcome to Leena</Text>
       <Text style={styles.subtitle}>
         Practice real conversations before they happen — in your own language first. No one is
@@ -97,8 +101,8 @@ export function OnboardingScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: spacing.xl, justifyContent: "center", backgroundColor: colors.background },
-  emoji: { fontSize: 40, marginBottom: spacing.md, textAlign: "center" },
-  title: { ...typography.h1, marginBottom: spacing.sm, textAlign: "center" },
+  heroIcon: { width: 88, height: 88, alignSelf: "center", marginBottom: spacing.md },
+  title: { ...typography.display, marginBottom: spacing.sm, textAlign: "center" },
   subtitle: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xxl, textAlign: "center" },
   label: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.textPrimary, marginBottom: spacing.md },
   chipGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.lg },

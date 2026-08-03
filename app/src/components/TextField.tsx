@@ -1,6 +1,6 @@
 import { StyleSheet, TextInput, TextInputProps } from "react-native";
 import { useState } from "react";
-import { colors, radius, spacing, typography } from "../theme";
+import { colors, radius, shadow, spacing, typography } from "../theme";
 
 export function TextField(props: TextInputProps) {
   const [focused, setFocused] = useState(false);
@@ -25,15 +25,15 @@ export function TextField(props: TextInputProps) {
 const styles = StyleSheet.create({
   base: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: radius.input,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
+    borderWidth: 1.5,
+    borderColor: "transparent",
     ...typography.body,
+    ...shadow.subtle,
   },
   focused: {
     borderColor: colors.primary,
-    borderWidth: 1.5,
   },
 });

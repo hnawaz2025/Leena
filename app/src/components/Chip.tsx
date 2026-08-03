@@ -1,17 +1,25 @@
+import type { LucideIcon } from "lucide-react-native";
 import { Pressable, StyleSheet, Text } from "react-native";
 import { colors, radius, spacing, typography } from "../theme";
 
 interface ChipProps {
   label: string;
-  icon?: string;
+  icon?: LucideIcon;
   selected?: boolean;
   onPress: () => void;
 }
 
-export function Chip({ label, icon, selected = false, onPress }: ChipProps) {
+export function Chip({ label, icon: Icon, selected = false, onPress }: ChipProps) {
   return (
     <Pressable onPress={onPress} style={[styles.base, selected && styles.selected]}>
-      {icon ? <Text style={styles.icon}>{icon} </Text> : null}
+      {Icon ? (
+        <Icon
+          size={14}
+          color={selected ? colors.white : colors.textSecondary}
+          strokeWidth={2}
+          style={styles.icon}
+        />
+      ) : null}
       <Text style={[styles.label, selected && styles.selectedLabel]}>{label}</Text>
     </Pressable>
   );
@@ -33,7 +41,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   icon: {
-    fontSize: 14,
+    marginRight: spacing.xs,
   },
   label: {
     ...typography.caption,

@@ -1,6 +1,7 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Briefcase, FileText, House, Lock, Stethoscope } from "lucide-react-native";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { api } from "../api/client";
 import { Button } from "../components/Button";
 import { Chip } from "../components/Chip";
@@ -11,10 +12,10 @@ import { colors, spacing, typography } from "../theme";
 type Props = NativeStackScreenProps<RootStackParamList, "DocumentUpload">;
 
 const DOCUMENT_TYPES = [
-  { value: "lease", label: "Lease", icon: "🏠" },
-  { value: "medical", label: "Medical", icon: "🩺" },
-  { value: "job-letter", label: "Job letter", icon: "💼" },
-  { value: "other", label: "Other", icon: "📄" },
+  { value: "lease", label: "Lease", icon: House },
+  { value: "medical", label: "Medical", icon: Stethoscope },
+  { value: "job-letter", label: "Job letter", icon: Briefcase },
+  { value: "other", label: "Other", icon: FileText },
 ] as const;
 
 // MVP: the user pastes the document text directly. Camera capture + on-device
@@ -50,9 +51,10 @@ export function DocumentUploadScreen({ navigation }: Props) {
       <Text style={styles.subtitle}>
         Paste the text of a lease, form, or letter. Leena will build a practice conversation around it.
       </Text>
-      <Text style={styles.trustNote}>
-        🔒 Only used to build your practice scenario — never shared.
-      </Text>
+      <View style={styles.trustNoteRow}>
+        <Lock size={13} color={colors.textMuted} strokeWidth={2} />
+        <Text style={styles.trustNote}>Only used to build your practice scenario — never shared.</Text>
+      </View>
 
       <Text style={styles.label}>What kind of document?</Text>
       <ScrollView
@@ -96,9 +98,10 @@ export function DocumentUploadScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: spacing.xl, backgroundColor: colors.background },
-  title: { ...typography.h1, fontSize: 22, marginBottom: spacing.sm },
+  title: { ...typography.h1, marginBottom: spacing.sm },
   subtitle: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.md },
-  trustNote: { ...typography.caption, color: colors.textMuted, marginBottom: spacing.xl },
+  trustNoteRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs, marginBottom: spacing.xl },
+  trustNote: { ...typography.caption, color: colors.textMuted },
   label: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.textPrimary, marginBottom: spacing.md },
   typeRow: { marginBottom: spacing.lg },
   typeRowContent: { flexDirection: "row", gap: spacing.sm },

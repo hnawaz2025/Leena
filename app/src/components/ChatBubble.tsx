@@ -1,5 +1,7 @@
-import { StyleSheet, Text, View } from "react-native";
-import { colors, radius, spacing, typography } from "../theme";
+import { LinearGradient } from "expo-linear-gradient";
+import { useEffect, useRef } from "react";
+import { Animated, StyleSheet, Text, View } from "react-native";
+import { colors, gradients, radius, spacing, typography } from "../theme";
 
 interface ChatBubbleProps {
   text: string;
@@ -8,12 +10,38 @@ interface ChatBubbleProps {
 
 export function ChatBubble({ text, speaker }: ChatBubbleProps) {
   const isUser = speaker === "user";
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+  }, [progress]);
+
+  const animatedStyle = {
+    opacity: progress,
+    transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }],
+  };
+
+  if (isUser) {
+    return (
+      <Animated.View style={[styles.row, styles.rowUser, animatedStyle]}>
+        <LinearGradient
+          colors={gradients.primary}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.bubble, styles.userBubble]}
+        >
+          <Text style={styles.userText}>{text}</Text>
+        </LinearGradient>
+      </Animated.View>
+    );
+  }
+
   return (
-    <View style={[styles.row, isUser ? styles.rowUser : styles.rowAgent]}>
-      <View style={[styles.bubble, isUser ? styles.userBubble : styles.agentBubble]}>
-        <Text style={isUser ? styles.userText : styles.agentText}>{text}</Text>
+    <Animated.View style={[styles.row, styles.rowAgent, animatedStyle]}>
+      <View style={[styles.bubble, styles.agentBubble]}>
+        <Text style={styles.agentText}>{text}</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -35,7 +63,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.chatBubble,
   },
   userBubble: {
-    backgroundColor: colors.primary,
     borderBottomRightRadius: 4,
   },
   agentBubble: {
