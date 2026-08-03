@@ -1,5 +1,9 @@
 import { Audio } from "expo-av";
-import * as FileSystem from "expo-file-system";
+// This SDK's expo-file-system major version moved readAsStringAsync/EncodingType
+// under a "/legacy" subpath (the new default export uses File/Directory classes
+// instead) -- importing from "expo-file-system" directly triggers a deprecation
+// path that isn't fully implemented on web, breaking transcription there.
+import * as FileSystem from "expo-file-system/legacy";
 import { useRef, useState } from "react";
 import { Platform } from "react-native";
 import { api } from "../api/client";
