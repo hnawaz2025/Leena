@@ -35,13 +35,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.chatBubble,
   },
   userBubble: {
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.primary,
     borderBottomRightRadius: 4,
   },
   agentBubble: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 1.5,
+    borderColor: colors.secondary,
     borderBottomLeftRadius: 4,
   },
   userText: {

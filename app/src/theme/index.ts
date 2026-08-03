@@ -1,17 +1,23 @@
+// Sampled directly from leena_icon.png (the two speech bubbles in
+// conversation): deep violet + amber orange, meeting in the middle. Violet
+// reads as "you," orange as "the person you're practicing with" -- carried
+// through into chat bubble colors on the Conversation screen.
 export const colors = {
-  primary: "#C1622B",
-  primaryDark: "#9E4E20",
-  secondary: "#2E6B5E",
+  primary: "#4A1FB8", // violet bubble
+  primaryDark: "#2D0A8C", // indigo dots / pressed state
+  secondary: "#FF8C1A", // orange bubble
+  secondaryLight: "#FFB22F", // orange bubble gradient top
+  highlight: "#FFEC83", // pale yellow dots
   success: "#3F8F5F",
   warning: "#C48A1E",
-  error: "#B4432E",
-  background: "#FBF6F0",
+  error: "#D64545",
+  background: "#F8F7FB",
   surface: "#FFFFFF",
-  surfaceWarm: "#F3E9DD",
-  border: "#E8DDD0",
-  textPrimary: "#2B2420",
-  textSecondary: "#6E6255",
-  textMuted: "#A69C8E",
+  surfaceWarm: "#FFF3DC",
+  border: "#E8E6EF",
+  textPrimary: "#201C2B",
+  textSecondary: "#6B6575",
+  textMuted: "#A29CB0",
   white: "#FFFFFF",
 };
 
@@ -81,7 +87,7 @@ export const typography = {
 
 export const shadow = {
   subtle: {
-    shadowColor: "#2B2420",
+    shadowColor: colors.textPrimary,
     shadowOpacity: 0.12,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },

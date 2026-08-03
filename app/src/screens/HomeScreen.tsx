@@ -64,7 +64,7 @@ export function HomeScreen({ navigation }: Props) {
               }
             >
               <Card
-                accentColor={item.status === "completed" ? colors.secondary : colors.primary}
+                accentColor={item.status === "completed" ? colors.success : colors.primary}
                 style={styles.card}
               >
                 <View style={styles.cardRow}>
