@@ -61,8 +61,7 @@ export function OnboardingScreen({ navigation }: Props) {
       />
       <Text style={styles.title}>Welcome to Leena</Text>
       <Text style={styles.subtitle}>
-        Practice real conversations before they happen — in your own language first. No one is
-        judging your English here.
+        Practice real conversations before they happen — in your own language first.
       </Text>
 
       <Text style={styles.label}>Your native language</Text>
