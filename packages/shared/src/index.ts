@@ -27,6 +27,7 @@ export interface TurnDTO {
 export interface SessionDTO {
   id: string;
   scenarioId: string;
+  scenarioTitle: string;
   startedAt: string;
   endedAt: string | null;
   status: "active" | "completed";

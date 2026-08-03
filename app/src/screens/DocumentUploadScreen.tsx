@@ -1,19 +1,28 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text } from "react-native";
 import { api } from "../api/client";
+import { Button } from "../components/Button";
+import { Chip } from "../components/Chip";
+import { TextField } from "../components/TextField";
 import type { RootStackParamList } from "../navigation/types";
+import { colors, spacing, typography } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "DocumentUpload">;
 
-const DOCUMENT_TYPES = ["lease", "medical", "job-letter", "other"] as const;
+const DOCUMENT_TYPES = [
+  { value: "lease", label: "Lease", icon: "🏠" },
+  { value: "medical", label: "Medical", icon: "🩺" },
+  { value: "job-letter", label: "Job letter", icon: "💼" },
+  { value: "other", label: "Other", icon: "📄" },
+] as const;
 
 // MVP: the user pastes the document text directly. Camera capture + on-device
 // OCR is planned for the document-upload milestone; this screen already
 // produces the same downstream shape (a Document row with extractedText) so
 // swapping in OCR later doesn't change anything past this screen.
 export function DocumentUploadScreen({ navigation }: Props) {
-  const [type, setType] = useState<(typeof DOCUMENT_TYPES)[number]>("lease");
+  const [type, setType] = useState<(typeof DOCUMENT_TYPES)[number]["value"]>("lease");
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,25 +45,34 @@ export function DocumentUploadScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Add a document</Text>
       <Text style={styles.subtitle}>
         Paste the text of a lease, form, or letter. Leena will build a practice conversation around it.
       </Text>
+      <Text style={styles.trustNote}>
+        🔒 Only used to build your practice scenario — never shared.
+      </Text>
 
-      <View style={styles.typeRow}>
+      <Text style={styles.label}>What kind of document?</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.typeRow}
+        contentContainerStyle={styles.typeRowContent}
+      >
         {DOCUMENT_TYPES.map((t) => (
-          <TouchableOpacity
-            key={t}
-            style={[styles.typeChip, type === t && styles.typeChipActive]}
-            onPress={() => setType(t)}
-          >
-            <Text style={[styles.typeChipText, type === t && styles.typeChipTextActive]}>{t}</Text>
-          </TouchableOpacity>
+          <Chip
+            key={t.value}
+            label={t.label}
+            icon={t.icon}
+            selected={type === t.value}
+            onPress={() => setType(t.value)}
+          />
         ))}
-      </View>
+      </ScrollView>
 
-      <TextInput
+      <TextField
         style={styles.textArea}
         placeholder="Paste document text here…"
         value={text}
@@ -65,39 +83,31 @@ export function DocumentUploadScreen({ navigation }: Props) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <TouchableOpacity style={styles.button} onPress={handleSave} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Use this document</Text>}
-      </TouchableOpacity>
-    </View>
+      <Button label="Use this document" onPress={handleSave} loading={loading} style={styles.button} />
+      <Button
+        label="Skip for now"
+        variant="secondary"
+        onPress={() => navigation.navigate("ScenarioSetup", undefined)}
+        style={styles.skipButton}
+      />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, backgroundColor: "#fff" },
-  title: { fontSize: 22, fontWeight: "700", marginBottom: 8 },
-  subtitle: { fontSize: 14, color: "#555", marginBottom: 20 },
-  typeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
-  typeChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  typeChipActive: { backgroundColor: "#2f6fed", borderColor: "#2f6fed" },
-  typeChipText: { color: "#333", fontSize: 13 },
-  typeChipTextActive: { color: "#fff" },
+  container: { flexGrow: 1, padding: spacing.xl, backgroundColor: colors.background },
+  title: { ...typography.h1, fontSize: 22, marginBottom: spacing.sm },
+  subtitle: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.md },
+  trustNote: { ...typography.caption, color: colors.textMuted, marginBottom: spacing.xl },
+  label: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.textPrimary, marginBottom: spacing.md },
+  typeRow: { marginBottom: spacing.lg },
+  typeRowContent: { flexDirection: "row", gap: spacing.sm },
   textArea: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 15,
     minHeight: 180,
     textAlignVertical: "top",
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
-  button: { backgroundColor: "#2f6fed", borderRadius: 10, padding: 16, alignItems: "center" },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  error: { color: "#c0392b", marginBottom: 12 },
+  button: { marginBottom: spacing.md },
+  skipButton: {},
+  error: { ...typography.caption, color: colors.error, marginBottom: spacing.md },
 });

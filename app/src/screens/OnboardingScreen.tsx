@@ -1,29 +1,49 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { api } from "../api/client";
+import { Button } from "../components/Button";
+import { Chip } from "../components/Chip";
+import { TextField } from "../components/TextField";
 import type { RootStackParamList } from "../navigation/types";
 import { useAppStore } from "../store/useAppStore";
+import { colors, spacing, typography } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 
+const COMMON_LANGUAGES = [
+  "Spanish",
+  "Mandarin",
+  "Hindi",
+  "Arabic",
+  "Portuguese",
+  "Vietnamese",
+  "Tagalog",
+  "Korean",
+  "Russian",
+  "French",
+];
+
 export function OnboardingScreen({ navigation }: Props) {
   const [nativeLanguage, setNativeLanguage] = useState("");
-  const [targetLanguage, setTargetLanguage] = useState("en");
+  const [showOtherInput, setShowOtherInput] = useState(false);
+  const [customLanguage, setCustomLanguage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const setProfile = useAppStore((s) => s.setProfile);
 
+  const selectedLanguage = showOtherInput ? customLanguage.trim() : nativeLanguage;
+
   async function handleContinue() {
-    if (!nativeLanguage.trim()) {
+    if (!selectedLanguage) {
       setError("Tell us your native language first.");
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      await api.identify(nativeLanguage.trim(), targetLanguage.trim() || "en");
-      setProfile(nativeLanguage.trim(), targetLanguage.trim() || "en");
+      await api.identify(selectedLanguage, "English");
+      setProfile(selectedLanguage, "English");
       navigation.replace("Home");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -33,59 +53,57 @@ export function OnboardingScreen({ navigation }: Props) {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.emoji}>💬</Text>
       <Text style={styles.title}>Welcome to Leena</Text>
       <Text style={styles.subtitle}>
-        Practice real conversations before they happen — in your own language first.
+        Practice real conversations before they happen — in your own language first. No one is
+        judging your English here.
       </Text>
 
       <Text style={styles.label}>Your native language</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g. Spanish, Hindi, Mandarin"
-        value={nativeLanguage}
-        onChangeText={setNativeLanguage}
-        autoCapitalize="none"
-      />
+      <View style={styles.chipGrid}>
+        {COMMON_LANGUAGES.map((lang) => (
+          <Chip
+            key={lang}
+            label={lang}
+            selected={!showOtherInput && nativeLanguage === lang}
+            onPress={() => {
+              setShowOtherInput(false);
+              setNativeLanguage(lang);
+            }}
+          />
+        ))}
+        <Chip label="Other" selected={showOtherInput} onPress={() => setShowOtherInput(true)} />
+      </View>
 
-      <Text style={styles.label}>Language you want to practice</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g. English"
-        value={targetLanguage}
-        onChangeText={setTargetLanguage}
-        autoCapitalize="none"
-      />
+      {showOtherInput ? (
+        <TextField
+          style={styles.customInput}
+          placeholder="Type your native language"
+          value={customLanguage}
+          onChangeText={setCustomLanguage}
+        />
+      ) : null}
+
+      <Text style={styles.note}>You'll be practicing: English</Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <TouchableOpacity style={styles.button} onPress={handleContinue} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Continue</Text>}
-      </TouchableOpacity>
-    </View>
+      <Button label="Continue" onPress={handleContinue} loading={loading} style={styles.button} />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: "center", backgroundColor: "#fff" },
-  title: { fontSize: 28, fontWeight: "700", marginBottom: 8 },
-  subtitle: { fontSize: 15, color: "#555", marginBottom: 32 },
-  label: { fontSize: 13, fontWeight: "600", marginBottom: 6, color: "#333" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: "#2f6fed",
-    borderRadius: 10,
-    padding: 16,
-    alignItems: "center",
-    marginTop: 12,
-  },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  error: { color: "#c0392b", marginBottom: 12 },
+  container: { flexGrow: 1, padding: spacing.xl, justifyContent: "center", backgroundColor: colors.background },
+  emoji: { fontSize: 40, marginBottom: spacing.md, textAlign: "center" },
+  title: { ...typography.h1, marginBottom: spacing.sm, textAlign: "center" },
+  subtitle: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xxl, textAlign: "center" },
+  label: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.textPrimary, marginBottom: spacing.md },
+  chipGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.lg },
+  customInput: { marginBottom: spacing.lg },
+  note: { ...typography.caption, color: colors.textMuted, marginBottom: spacing.xl },
+  button: { marginTop: spacing.sm },
+  error: { ...typography.caption, color: colors.error, marginBottom: spacing.md },
 });

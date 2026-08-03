@@ -11,6 +11,7 @@ export const sessionsRouter = Router();
 function sessionToDTO(session: {
   id: string;
   scenarioId: string;
+  scenario: { title: string };
   startedAt: Date;
   endedAt: Date | null;
   status: string;
@@ -18,6 +19,7 @@ function sessionToDTO(session: {
   return {
     id: session.id,
     scenarioId: session.scenarioId,
+    scenarioTitle: session.scenario.title,
     startedAt: session.startedAt.toISOString(),
     endedAt: session.endedAt ? session.endedAt.toISOString() : null,
     status: session.status as "active" | "completed",
@@ -92,7 +94,7 @@ sessionsRouter.post(
       data: { userId: req.userId!, scenarioId: scenario.id },
     });
 
-    res.status(201).json(sessionToDTO(session));
+    res.status(201).json(sessionToDTO({ ...session, scenario }));
   })
 );
 
@@ -184,7 +186,7 @@ sessionsRouter.post(
       },
     });
 
-    res.json(sessionToDTO(updated));
+    res.json(sessionToDTO({ ...updated, scenario: session.scenario }));
   })
 );
 

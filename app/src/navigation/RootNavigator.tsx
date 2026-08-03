@@ -5,13 +5,23 @@ import { FeedbackScreen } from "../screens/FeedbackScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { OnboardingScreen } from "../screens/OnboardingScreen";
 import { ScenarioSetupScreen } from "../screens/ScenarioSetupScreen";
+import { colors, fontFamily } from "../theme";
 import type { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+const screenOptions = {
+  headerStyle: { backgroundColor: colors.background },
+  headerShadowVisible: false,
+  headerTintColor: colors.textPrimary,
+  headerTitleStyle: { fontFamily: fontFamily.headingSemiBold, fontSize: 17 },
+  headerBackTitle: "",
+  contentStyle: { backgroundColor: colors.background },
+};
+
 export function RootNavigator() {
   return (
-    <Stack.Navigator initialRouteName="Onboarding">
+    <Stack.Navigator initialRouteName="Onboarding" screenOptions={screenOptions}>
       <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Home" component={HomeScreen} options={{ title: "Leena" }} />
       <Stack.Screen

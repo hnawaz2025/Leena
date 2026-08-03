@@ -57,6 +57,9 @@ export const api = {
 
   listSessions: () => request<import("@leena/shared").SessionDTO[]>("/sessions"),
 
+  getScenario: (scenarioId: string) =>
+    request<import("@leena/shared").ScenarioDTO>(`/scenarios/${scenarioId}`),
+
   createSession: (scenarioId: string) =>
     request<import("@leena/shared").SessionDTO>("/sessions", {
       method: "POST",

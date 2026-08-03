@@ -10,7 +10,7 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   onboarded: false,
   nativeLanguage: "",
-  targetLanguage: "en",
+  targetLanguage: "English",
   setProfile: (nativeLanguage, targetLanguage) =>
     set({ nativeLanguage, targetLanguage, onboarded: true }),
 }));
