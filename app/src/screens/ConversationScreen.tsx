@@ -52,7 +52,6 @@ export function ConversationScreen({ route, navigation }: Props) {
     } else if (voice.state === "recording") {
       const text = await voice.stopRecordingAndTranscribe();
       if (text) setInput((prev) => (prev ? `${prev} ${text}` : text));
-      if (voice.error) setError(voice.error);
     }
   }
 
@@ -131,7 +130,7 @@ export function ConversationScreen({ route, navigation }: Props) {
       />
 
       {isRecording ? <Text style={styles.listeningNote}>Listening…</Text> : null}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {(error || voice.error) ? <Text style={styles.error}>{error || voice.error}</Text> : null}
 
       <View style={styles.inputRow}>
         <Pressable

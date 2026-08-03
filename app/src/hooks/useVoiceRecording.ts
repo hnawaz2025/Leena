@@ -17,16 +17,21 @@ export function useVoiceRecording() {
 
   async function startRecording() {
     setError(null);
-    const permission = await Audio.requestPermissionsAsync();
-    if (!permission.granted) {
-      setError("Microphone permission is required to speak your answer.");
-      return;
-    }
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) {
+        setError("Microphone permission is required to speak your answer.");
+        return;
+      }
 
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-    const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-    recordingRef.current = recording;
-    setState("recording");
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      recordingRef.current = recording;
+      setState("recording");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't start recording. Check microphone access.");
+      setState("idle");
+    }
   }
 
   async function stopRecordingAndTranscribe(): Promise<string | null> {
