@@ -2,27 +2,29 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import morgan from "morgan";
-import { getLLMProvider } from "./ai";
+import { getLLMProvider, getSpeechProvider } from "./ai";
 import { prisma } from "./db";
 import { loadEnv } from "./env";
 import { errorHandler } from "./middleware/errorHandler";
 import { documentsRouter } from "./routes/documents";
 import { scenariosRouter } from "./routes/scenarios";
 import { sessionsRouter } from "./routes/sessions";
+import { speechRouter } from "./routes/speech";
 import { usersRouter } from "./routes/users";
 
 const env = loadEnv();
 
-// Fail fast on a broken deploy (missing/invalid LLM config) instead of
-// looking "up" via /health and then 500ing on the first real request. The
-// speech provider isn't checked here: nothing calls it yet (voice is a
-// planned milestone), so it validates lazily the first time it's actually used.
+// Fail fast on a broken deploy (missing/invalid provider config) instead of
+// looking "up" via /health and then 500ing on the first real request.
 getLLMProvider();
+getSpeechProvider();
 
 const app = express();
 app.use(cors());
 app.use(morgan("dev"));
-app.use(express.json({ limit: "2mb" }));
+// Voice recordings arrive as base64 JSON, which inflates size ~33% over the
+// raw audio -- a short voice message can exceed the default 2mb limit.
+app.use(express.json({ limit: "15mb" }));
 
 app.get("/health", async (_req, res) => {
   try {
@@ -37,6 +39,7 @@ app.use("/users", usersRouter);
 app.use("/documents", documentsRouter);
 app.use("/scenarios", scenariosRouter);
 app.use("/sessions", sessionsRouter);
+app.use("/speech", speechRouter);
 
 app.use(errorHandler);
 

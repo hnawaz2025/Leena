@@ -6,10 +6,6 @@ const baseSchema = z.object({
   AI_LLM_PROVIDER: z.enum(["anthropic", "featherless"]).default("anthropic"),
   AI_SPEECH_PROVIDER: z.enum(["openai"]).default("openai"),
   ANTHROPIC_API_KEY: z.string().optional(),
-  // Not required at boot: nothing calls the speech provider yet (voice is a
-  // planned milestone, not built). It's validated lazily by getSpeechProvider()
-  // itself, so it'll fail loudly the moment a route actually needs it instead
-  // of blocking the whole server from starting today.
   OPENAI_API_KEY: z.string().optional(),
   FEATHERLESS_API_KEY: z.string().optional(),
   FEATHERLESS_MODEL: z.string().optional(),
@@ -39,6 +35,13 @@ const envSchema = baseSchema.superRefine((env, ctx) => {
           "FEATHERLESS_MODEL is required when AI_LLM_PROVIDER=featherless (e.g. a DeepSeek model id from your Featherless dashboard). Check that model's concurrency-unit cost before using it in a live demo.",
       });
     }
+  }
+  if (env.AI_SPEECH_PROVIDER === "openai" && !env.OPENAI_API_KEY) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["OPENAI_API_KEY"],
+      message: "OPENAI_API_KEY is required when AI_SPEECH_PROVIDER=openai (used for Whisper transcription)",
+    });
   }
 });
 

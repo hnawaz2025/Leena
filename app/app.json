@@ -7,7 +7,10 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Leena uses your microphone so you can practice speaking your conversation out loud."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,6 +27,12 @@
     "plugins": [
       "expo-secure-store",
       "expo-font",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Leena uses your microphone so you can practice speaking your conversation out loud."
+        }
+      ],
       [
         "expo-splash-screen",
         {

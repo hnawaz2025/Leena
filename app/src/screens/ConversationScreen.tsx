@@ -1,7 +1,8 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
+import * as Speech from "expo-speech";
 import { LinearGradient } from "expo-linear-gradient";
-import { Drama, Mic, Send } from "lucide-react-native";
+import { Drama, Mic, Send, Square } from "lucide-react-native";
 import { useState } from "react";
 import {
   FlatList,
@@ -16,22 +17,23 @@ import { api } from "../api/client";
 import { BreathingDot } from "../components/BreathingDot";
 import { ChatBubble } from "../components/ChatBubble";
 import { TextField } from "../components/TextField";
+import { useVoiceRecording } from "../hooks/useVoiceRecording";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, gradients, spacing, typography } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Conversation">;
 
-// MVP is turn-based text input/output. Voice (mic capture -> STT -> this same
-// sendTurn call -> TTS playback of the agent reply) is the next milestone —
-// it slots in here without changing the transcript/session logic. The mic
-// button below is a reserved, disabled affordance so the layout doesn't need
-// rework once voice lands.
+// Turn-based voice loop: tap the mic to record, tap again to stop -> Whisper
+// transcribes it into the text input for review -> send as normal -> the
+// agent's reply is read aloud with on-device TTS (expo-speech, free, no
+// API cost) so the practice actually feels spoken, not just typed.
 export function ConversationScreen({ route, navigation }: Props) {
   const { sessionId, targetLanguage, scenarioId } = route.params;
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [ending, setEnding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const voice = useVoiceRecording();
 
   const { data: scenario } = useQuery({
     queryKey: ["scenario", scenarioId],
@@ -43,6 +45,17 @@ export function ConversationScreen({ route, navigation }: Props) {
     queryFn: () => api.listTurns(sessionId),
   });
 
+  async function handleMicPress() {
+    setError(null);
+    if (voice.state === "idle") {
+      await voice.startRecording();
+    } else if (voice.state === "recording") {
+      const text = await voice.stopRecordingAndTranscribe();
+      if (text) setInput((prev) => (prev ? `${prev} ${text}` : text));
+      if (voice.error) setError(voice.error);
+    }
+  }
+
   async function handleSend() {
     if (!input.trim()) return;
     setSending(true);
@@ -51,7 +64,11 @@ export function ConversationScreen({ route, navigation }: Props) {
     setInput("");
     try {
       await api.sendTurn(sessionId, text, targetLanguage);
-      await refetch();
+      const { data: updatedTurns } = await refetch();
+      const lastTurn = updatedTurns?.[updatedTurns.length - 1];
+      if (lastTurn?.speaker === "agent") {
+        Speech.speak(lastTurn.text, { language: "en-US" });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -60,6 +77,7 @@ export function ConversationScreen({ route, navigation }: Props) {
   }
 
   async function handleEnd() {
+    Speech.stop();
     setEnding(true);
     setError(null);
     try {
@@ -70,6 +88,9 @@ export function ConversationScreen({ route, navigation }: Props) {
       setEnding(false);
     }
   }
+
+  const isRecording = voice.state === "recording";
+  const isTranscribing = voice.state === "transcribing";
 
   return (
     <KeyboardAvoidingView
@@ -109,15 +130,26 @@ export function ConversationScreen({ route, navigation }: Props) {
         ListFooterComponent={sending ? <BreathingDot /> : null}
       />
 
+      {isRecording ? <Text style={styles.listeningNote}>Listening…</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <View style={styles.inputRow}>
-        <Pressable style={styles.micButton} disabled>
-          <Mic size={18} color={colors.textMuted} strokeWidth={2} />
+        <Pressable
+          style={[styles.micButton, isRecording && styles.micButtonActive]}
+          onPress={handleMicPress}
+          disabled={isTranscribing || sending}
+        >
+          {isTranscribing ? (
+            <BreathingDot size={16} />
+          ) : isRecording ? (
+            <Square size={16} color={colors.white} strokeWidth={2} fill={colors.white} />
+          ) : (
+            <Mic size={18} color={colors.textSecondary} strokeWidth={2} />
+          )}
         </Pressable>
         <TextField
           style={styles.input}
-          placeholder={`Type in ${targetLanguage}…`}
+          placeholder={`Type or speak in ${targetLanguage}…`}
           value={input}
           onChangeText={setInput}
           editable={!sending}
@@ -167,6 +199,12 @@ const styles = StyleSheet.create({
   list: { flex: 1 },
   listContent: { padding: spacing.lg },
   empty: { ...typography.body, color: colors.textMuted, textAlign: "center", marginTop: spacing.xxxl },
+  listeningNote: {
+    ...typography.caption,
+    color: colors.error,
+    textAlign: "center",
+    marginBottom: spacing.xs,
+  },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -183,7 +221,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.background,
-    opacity: 0.6,
+  },
+  micButtonActive: {
+    backgroundColor: colors.error,
   },
   input: { flex: 1 },
   sendButton: {
