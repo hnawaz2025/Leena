@@ -24,3 +24,15 @@ export const analyzeSessionResultSchema = z.object({
   ),
 });
 export type AnalyzeSessionResult = z.infer<typeof analyzeSessionResultSchema>;
+
+export const documentExplanationSchema = z.object({
+  summary: z.string().min(1),
+  keyTerms: z.array(
+    z.object({
+      term: z.string().min(1),
+      definition: z.string().min(1),
+    })
+  ),
+  actionItems: z.array(z.string()),
+});
+export type DocumentExplanation = z.infer<typeof documentExplanationSchema>;

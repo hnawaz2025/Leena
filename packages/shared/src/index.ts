@@ -42,6 +42,15 @@ export interface FeedbackReportDTO {
   createdAt: string;
 }
 
+export interface DocumentExplanationDTO {
+  id: string;
+  documentId: string;
+  summary: string;
+  keyTerms: { term: string; definition: string }[];
+  actionItems: string[];
+  createdAt: string;
+}
+
 export interface CreateScenarioRequest {
   situationType: string;
   nativeLanguage: Language;

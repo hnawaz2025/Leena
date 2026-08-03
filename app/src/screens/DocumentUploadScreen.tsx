@@ -25,23 +25,48 @@ const DOCUMENT_TYPES = [
 export function DocumentUploadScreen({ navigation }: Props) {
   const [type, setType] = useState<(typeof DOCUMENT_TYPES)[number]["value"]>("lease");
   const [text, setText] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [savedDocumentId, setSavedDocumentId] = useState<string | null>(null);
+  const [loading, setLoading] = useState<"scenario" | "explain" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSave() {
+  async function ensureSaved(): Promise<string> {
+    if (savedDocumentId) return savedDocumentId;
+    const document = await api.createDocument(type, text.trim());
+    setSavedDocumentId(document.id);
+    return document.id;
+  }
+
+  async function handleUseForScenario() {
     if (!text.trim()) {
       setError("Paste the document text first.");
       return;
     }
-    setLoading(true);
+    setLoading("scenario");
     setError(null);
     try {
-      const document = await api.createDocument(type, text.trim());
-      navigation.navigate("ScenarioSetup", { documentId: document.id, documentType: type });
+      const documentId = await ensureSaved();
+      navigation.navigate("ScenarioSetup", { documentId, documentType: type });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
-      setLoading(false);
+      setLoading(null);
+    }
+  }
+
+  async function handleExplainInstead() {
+    if (!text.trim()) {
+      setError("Paste the document text first.");
+      return;
+    }
+    setLoading("explain");
+    setError(null);
+    try {
+      const documentId = await ensureSaved();
+      navigation.navigate("DocumentExplanation", { documentId, documentType: type });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setLoading(null);
     }
   }
 
@@ -49,11 +74,12 @@ export function DocumentUploadScreen({ navigation }: Props) {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Add a document</Text>
       <Text style={styles.subtitle}>
-        Paste the text of a lease, form, or letter. Leena will build a practice conversation around it.
+        Paste the text of a lease, form, or letter — to practice a conversation about it, or just
+        have it explained in plain language.
       </Text>
       <View style={styles.trustNoteRow}>
         <Lock size={13} color={colors.textMuted} strokeWidth={2} />
-        <Text style={styles.trustNote}>Only used to build your practice scenario — never shared.</Text>
+        <Text style={styles.trustNote}>Only used for what you ask below — never shared.</Text>
       </View>
 
       <Text style={styles.label}>What kind of document?</Text>
@@ -85,12 +111,25 @@ export function DocumentUploadScreen({ navigation }: Props) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Button label="Use this document" onPress={handleSave} loading={loading} style={styles.button} />
+      <Button
+        label="Practice a conversation about it"
+        onPress={handleUseForScenario}
+        loading={loading === "scenario"}
+        disabled={loading === "explain"}
+        style={styles.button}
+      />
+      <Button
+        label="Just explain it to me"
+        variant="secondary"
+        onPress={handleExplainInstead}
+        loading={loading === "explain"}
+        disabled={loading === "scenario"}
+        style={styles.button}
+      />
       <Button
         label="Skip for now"
         variant="secondary"
         onPress={() => navigation.navigate("ScenarioSetup", undefined)}
-        style={styles.skipButton}
       />
     </ScrollView>
   );
@@ -111,6 +150,5 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   button: { marginBottom: spacing.md },
-  skipButton: {},
   error: { ...typography.caption, color: colors.error, marginBottom: spacing.md },
 });

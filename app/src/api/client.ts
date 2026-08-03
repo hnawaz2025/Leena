@@ -49,6 +49,11 @@ export const api = {
       body: JSON.stringify({ type, extractedText }),
     }),
 
+  explainDocument: (documentId: string) =>
+    request<import("@leena/shared").DocumentExplanationDTO>(`/documents/${documentId}/explain`, {
+      method: "POST",
+    }),
+
   createScenario: (situationType: string, documentId?: string) =>
     request<import("@leena/shared").ScenarioDTO>("/scenarios", {
       method: "POST",

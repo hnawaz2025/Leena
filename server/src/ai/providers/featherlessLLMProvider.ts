@@ -1,11 +1,13 @@
 import OpenAI from "openai";
 import { callForJson } from "../jsonRetry";
-import { analyzeSessionResultSchema, generatedScenarioSchema } from "../schemas";
+import { analyzeSessionResultSchema, documentExplanationSchema, generatedScenarioSchema } from "../schemas";
 import type {
   AnalyzeSessionInput,
   AnalyzeSessionResult,
   ChatTurnInput,
   ChatTurnResult,
+  DocumentExplanation,
+  ExplainDocumentInput,
   GenerateScenarioInput,
   GeneratedScenario,
   LLMProvider,
@@ -16,6 +18,7 @@ import type {
 // Featherless's Chat plan caps context at 32K tokens.
 const MAX_HISTORY_TURNS_FOR_CHAT = 16;
 const MAX_TRANSCRIPT_TURNS_FOR_ANALYSIS = 40;
+const MAX_DOCUMENT_CHARS_FOR_EXPLANATION = 6000;
 
 // Featherless (https://featherless.ai) proxies 40,000+ open-weight models
 // (DeepSeek, Kimi, GLM, GPT-OSS, ...) behind an OpenAI-compatible API. The
@@ -97,6 +100,31 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
       const response = await this.client.chat.completions.create({
         model: this.model,
         max_tokens: 2048,
+        messages: [{ role: "user", content: buildPrompt(correctionNote) }],
+      });
+      return response.choices[0]?.message?.content ?? "";
+    });
+  }
+
+  async explainDocument(input: ExplainDocumentInput): Promise<DocumentExplanation> {
+    const truncatedText = input.documentText.slice(0, MAX_DOCUMENT_CHARS_FOR_EXPLANATION);
+
+    const buildPrompt = (correctionNote?: string) => `You are helping an immigrant understand a confusing official document
+(type: ${input.documentType}) in plain, simple language. Their native language is ${input.nativeLanguage}.
+
+Document text:
+"""${truncatedText}"""
+
+Return ONLY a JSON object with keys:
+summary (a short plain-language explanation of what this document says and what it means for the reader, written in ${input.nativeLanguage}),
+keyTerms (array of objects with "term" (the confusing word/phrase as it appears in the document) and "definition" (a simple explanation of it, written in ${input.nativeLanguage})),
+actionItems (array of short strings describing anything the reader needs to actually do, e.g. a deadline or required response, written in ${input.nativeLanguage}; empty array if there is nothing actionable).
+${correctionNote ? `\n${correctionNote}` : ""}`;
+
+    return callForJson(documentExplanationSchema, async (correctionNote) => {
+      const response = await this.client.chat.completions.create({
+        model: this.model,
+        max_tokens: 1536,
         messages: [{ role: "user", content: buildPrompt(correctionNote) }],
       });
       return response.choices[0]?.message?.content ?? "";

@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ConversationScreen } from "../screens/ConversationScreen";
+import { DocumentExplanationScreen } from "../screens/DocumentExplanationScreen";
 import { DocumentUploadScreen } from "../screens/DocumentUploadScreen";
 import { FeedbackScreen } from "../screens/FeedbackScreen";
 import { HomeScreen } from "../screens/HomeScreen";
@@ -40,6 +41,11 @@ export function RootNavigator() {
         options={{ title: "Practice conversation" }}
       />
       <Stack.Screen name="Feedback" component={FeedbackScreen} options={{ title: "Feedback" }} />
+      <Stack.Screen
+        name="DocumentExplanation"
+        component={DocumentExplanationScreen}
+        options={{ title: "Explain document" }}
+      />
     </Stack.Navigator>
   );
 }

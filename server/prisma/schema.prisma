@@ -20,16 +20,27 @@ model User {
 }
 
 model Document {
-  id            String     @id @default(uuid())
+  id            String               @id @default(uuid())
   userId        String
-  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   type          String
   extractedText String
   storageUrl    String?
-  createdAt     DateTime   @default(now())
+  createdAt     DateTime             @default(now())
   scenarios     Scenario[]
+  explanation   DocumentExplanation?
 
   @@index([userId])
+}
+
+model DocumentExplanation {
+  id          String   @id @default(uuid())
+  documentId  String   @unique
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  summary     String
+  keyTerms    Json
+  actionItems Json
+  createdAt   DateTime @default(now())
 }
 
 model Scenario {
@@ -50,16 +61,16 @@ model Scenario {
 }
 
 model Session {
-  id          String          @id @default(uuid())
-  userId      String
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  scenarioId  String
-  scenario    Scenario        @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  startedAt   DateTime        @default(now())
-  endedAt     DateTime?
-  status      String          @default("active")
-  turns       Turn[]
-  feedback    FeedbackReport?
+  id         String          @id @default(uuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenarioId String
+  scenario   Scenario        @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  startedAt  DateTime        @default(now())
+  endedAt    DateTime?
+  status     String          @default("active")
+  turns      Turn[]
+  feedback   FeedbackReport?
 
   @@index([userId])
   @@index([scenarioId])
