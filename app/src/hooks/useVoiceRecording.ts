@@ -10,6 +10,24 @@ import { api } from "../api/client";
 
 export type RecordingState = "idle" | "recording" | "transcribing";
 
+// expo-file-system's readAsStringAsync (even the /legacy version) doesn't
+// support web at all -- it's built around native filesystem paths, not the
+// blob: URLs the browser's MediaRecorder produces. On web we read the blob
+// ourselves via fetch + FileReader instead.
+async function readUriAsBase64(uri: string): Promise<string> {
+  if (Platform.OS === "web") {
+    const blob = await (await fetch(uri)).blob();
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    return dataUrl.split(",")[1] ?? "";
+  }
+  return FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+}
+
 // Wraps expo-av recording + reading the result as base64 + sending it to our
 // backend's Whisper-backed /speech/transcribe endpoint. Returns recognized
 // text rather than auto-sending it, so the user can review/correct a
@@ -49,9 +67,7 @@ export function useVoiceRecording() {
       recordingRef.current = null;
       if (!uri) throw new Error("No recording captured");
 
-      const audioBase64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      const audioBase64 = await readUriAsBase64(uri);
       const mimeType = Platform.OS === "web" ? "audio/webm" : "audio/m4a";
 
       const result = await api.transcribe(audioBase64, mimeType);
