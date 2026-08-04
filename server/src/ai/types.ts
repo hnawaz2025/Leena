@@ -32,11 +32,21 @@ export interface ExplainDocumentInput {
   nativeLanguage: string;
 }
 
+export interface ExtractDocumentTextInput {
+  image: Buffer;
+  mimeType: string;
+}
+
+export interface ExtractDocumentTextResult {
+  text: string;
+}
+
 export interface LLMProvider {
   generateScenario(input: GenerateScenarioInput): Promise<GeneratedScenario>;
   chatTurn(input: ChatTurnInput): Promise<ChatTurnResult>;
   analyzeSession(input: AnalyzeSessionInput): Promise<AnalyzeSessionResult>;
   explainDocument(input: ExplainDocumentInput): Promise<DocumentExplanation>;
+  extractDocumentText(input: ExtractDocumentTextInput): Promise<ExtractDocumentTextResult>;
 }
 
 export interface TranscribeInput {

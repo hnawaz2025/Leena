@@ -8,6 +8,8 @@ import type {
   ChatTurnResult,
   DocumentExplanation,
   ExplainDocumentInput,
+  ExtractDocumentTextInput,
+  ExtractDocumentTextResult,
   GenerateScenarioInput,
   GeneratedScenario,
   LLMProvider,
@@ -19,6 +21,14 @@ import type {
 const MAX_HISTORY_TURNS_FOR_CHAT = 16;
 const MAX_TRANSCRIPT_TURNS_FOR_ANALYSIS = 40;
 const MAX_DOCUMENT_CHARS_FOR_EXPLANATION = 6000;
+
+// The main FEATHERLESS_MODEL (e.g. GLM-4-9B-0414) is text-only. Document
+// photo capture needs actual vision, so this is a separate, dedicated model
+// rather than something the .env config controls -- Qwen3-VL-8B-Instruct
+// was tested directly against a synthetic document image and transcribed it
+// near-perfectly; "Instruct" (not "Thinking") avoids the reasoning-leak
+// problem seen with other small reasoning models on this platform.
+const VISION_MODEL = "Qwen/Qwen3-VL-8B-Instruct";
 
 // Featherless (https://featherless.ai) proxies 40,000+ open-weight models
 // (DeepSeek, Kimi, GLM, GPT-OSS, ...) behind an OpenAI-compatible API. The
@@ -129,5 +139,32 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
       });
       return response.choices[0]?.message?.content ?? "";
     });
+  }
+
+  async extractDocumentText(input: ExtractDocumentTextInput): Promise<ExtractDocumentTextResult> {
+    const base64Image = input.image.toString("base64");
+
+    const response = await this.client.chat.completions.create({
+      model: VISION_MODEL,
+      max_tokens: 2048,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Transcribe all the text visible in this photo of a document exactly as it appears, preserving line breaks. Return only the transcribed text, nothing else.",
+            },
+            { type: "image_url", image_url: { url: `data:${input.mimeType};base64,${base64Image}` } },
+          ],
+        },
+      ],
+    });
+
+    const text = response.choices[0]?.message?.content ?? "";
+    if (!text.trim()) {
+      throw new Error("Couldn't read any text in that photo. Try a clearer, well-lit picture.");
+    }
+    return { text: text.trim() };
   }
 }

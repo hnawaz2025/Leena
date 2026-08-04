@@ -8,6 +8,8 @@ import type {
   ChatTurnResult,
   DocumentExplanation,
   ExplainDocumentInput,
+  ExtractDocumentTextInput,
+  ExtractDocumentTextResult,
   GenerateScenarioInput,
   GeneratedScenario,
   LLMProvider,
@@ -122,5 +124,36 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
       });
       return response.content.find((b) => b.type === "text")?.text ?? "";
     });
+  }
+
+  async extractDocumentText(input: ExtractDocumentTextInput): Promise<ExtractDocumentTextResult> {
+    const base64Image = input.image.toString("base64");
+    const mediaType = input.mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+
+    const response = await this.client.messages.create({
+      model: MODEL,
+      max_tokens: 2048,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: { type: "base64", media_type: mediaType, data: base64Image },
+            },
+            {
+              type: "text",
+              text: "Transcribe all the text visible in this photo of a document exactly as it appears, preserving line breaks. Return only the transcribed text, nothing else.",
+            },
+          ],
+        },
+      ],
+    });
+
+    const text = response.content.find((b) => b.type === "text")?.text ?? "";
+    if (!text.trim()) {
+      throw new Error("Couldn't read any text in that photo. Try a clearer, well-lit picture.");
+    }
+    return { text: text.trim() };
   }
 }

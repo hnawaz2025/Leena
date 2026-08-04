@@ -8,8 +8,9 @@ import { requireUser, type AuthedRequest } from "../middleware/deviceAuth";
 
 export const documentsRouter = Router();
 
-// MVP: client sends already-extracted text (e.g. from on-device OCR or a text paste).
-// File upload + server-side OCR/PDF parsing is planned for the document-upload milestone.
+// Client always sends already-extracted plain text -- either typed directly,
+// or produced by POST /extract-from-image below when the user photographs a
+// document instead of pasting it.
 const createSchema = z.object({
   type: z.enum(["lease", "medical", "job-letter", "other"]),
   extractedText: z.string().min(1),
@@ -33,6 +34,32 @@ documentsRouter.post(
     });
 
     res.status(201).json({ id: document.id, type: document.type });
+  })
+);
+
+const extractFromImageSchema = z.object({
+  image: z.string().min(1), // base64-encoded photo
+  mimeType: z.string().min(1),
+});
+
+// Lets a user photograph a document instead of typing it out. Returns the
+// transcribed text for review/editing on the client rather than creating a
+// Document directly, reusing the same POST / endpoint once the user confirms
+// (and edits, if the photo was misread) the text.
+documentsRouter.post(
+  "/extract-from-image",
+  requireUser,
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const parsed = extractFromImageSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+    const imageBuffer = Buffer.from(parsed.data.image, "base64");
+    const result = await getLLMProvider().extractDocumentText({
+      image: imageBuffer,
+      mimeType: parsed.data.mimeType,
+    });
+
+    res.json({ text: result.text });
   })
 );
 

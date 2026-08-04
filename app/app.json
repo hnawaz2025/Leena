@@ -34,6 +34,13 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Leena uses your camera to photograph a document so it can be read into your practice scenario.",
+          "photosPermission": "Leena uses your photo library so you can attach a picture of a document."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",

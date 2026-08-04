@@ -22,8 +22,8 @@ getSpeechProvider();
 const app = express();
 app.use(cors());
 app.use(morgan("dev"));
-// Voice recordings arrive as base64 JSON, which inflates size ~33% over the
-// raw audio -- a short voice message can exceed the default 2mb limit.
+// Voice recordings and document photos arrive as base64 JSON, which inflates
+// size ~33% over the raw file -- both can exceed the default 2mb limit.
 app.use(express.json({ limit: "15mb" }));
 
 app.get("/health", async (_req, res) => {

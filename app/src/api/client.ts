@@ -54,6 +54,12 @@ export const api = {
       method: "POST",
     }),
 
+  extractDocumentImage: (imageBase64: string, mimeType: string) =>
+    request<{ text: string }>("/documents/extract-from-image", {
+      method: "POST",
+      body: JSON.stringify({ image: imageBase64, mimeType }),
+    }),
+
   createScenario: (situationType: string, documentId?: string) =>
     request<import("@leena/shared").ScenarioDTO>("/scenarios", {
       method: "POST",
