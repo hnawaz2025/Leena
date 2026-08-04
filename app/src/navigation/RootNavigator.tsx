@@ -12,20 +12,24 @@ import type { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const screenOptions = {
-  headerStyle: { backgroundColor: colors.background },
-  headerShadowVisible: false,
-  headerTintColor: colors.textPrimary,
-  headerTitleStyle: { fontFamily: fontFamily.headingSemiBold, fontSize: 17 },
-  headerBackTitle: "",
-  contentStyle: { backgroundColor: colors.background },
-};
-
 export function RootNavigator() {
   return (
-    <Stack.Navigator initialRouteName="Onboarding" screenOptions={screenOptions}>
+    <Stack.Navigator
+      initialRouteName="Onboarding"
+      screenOptions={({ navigation }) => ({
+        headerStyle: { backgroundColor: colors.background },
+        headerShadowVisible: false,
+        headerTintColor: colors.textPrimary,
+        headerTitleStyle: { fontFamily: fontFamily.headingSemiBold, fontSize: 17 },
+        headerBackTitle: "",
+        contentStyle: { backgroundColor: colors.background },
+        // Every screen gets a one-tap way back to Home, since the default
+        // back arrow only goes one screen back, not all the way home.
+        headerRight: () => <HeaderHomeButton onPress={() => navigation.popToTop()} />,
+      })}
+    >
       <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Home" component={HomeScreen} options={{ title: "Leena" }} />
+      <Stack.Screen name="Home" component={HomeScreen} options={{ title: "Leena", headerRight: undefined }} />
       <Stack.Screen
         name="DocumentUpload"
         component={DocumentUploadScreen}
@@ -39,26 +43,13 @@ export function RootNavigator() {
       <Stack.Screen
         name="Conversation"
         component={ConversationScreen}
-        options={({ navigation }) => ({
-          title: "Practice conversation",
-          headerRight: () => <HeaderHomeButton onPress={() => navigation.popToTop()} />,
-        })}
+        options={{ title: "Practice conversation" }}
       />
-      <Stack.Screen
-        name="Feedback"
-        component={FeedbackScreen}
-        options={({ navigation }) => ({
-          title: "Feedback",
-          headerRight: () => <HeaderHomeButton onPress={() => navigation.popToTop()} />,
-        })}
-      />
+      <Stack.Screen name="Feedback" component={FeedbackScreen} options={{ title: "Feedback" }} />
       <Stack.Screen
         name="DocumentExplanation"
         component={DocumentExplanationScreen}
-        options={({ navigation }) => ({
-          title: "Explain document",
-          headerRight: () => <HeaderHomeButton onPress={() => navigation.popToTop()} />,
-        })}
+        options={{ title: "Explain document" }}
       />
     </Stack.Navigator>
   );
