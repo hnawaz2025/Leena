@@ -1,4 +1,5 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { HeaderHomeButton } from "../components/HeaderHomeButton";
 import { ConversationScreen } from "../screens/ConversationScreen";
 import { DocumentExplanationScreen } from "../screens/DocumentExplanationScreen";
 import { DocumentUploadScreen } from "../screens/DocumentUploadScreen";
@@ -38,13 +39,26 @@ export function RootNavigator() {
       <Stack.Screen
         name="Conversation"
         component={ConversationScreen}
-        options={{ title: "Practice conversation" }}
+        options={({ navigation }) => ({
+          title: "Practice conversation",
+          headerRight: () => <HeaderHomeButton onPress={() => navigation.popToTop()} />,
+        })}
       />
-      <Stack.Screen name="Feedback" component={FeedbackScreen} options={{ title: "Feedback" }} />
+      <Stack.Screen
+        name="Feedback"
+        component={FeedbackScreen}
+        options={({ navigation }) => ({
+          title: "Feedback",
+          headerRight: () => <HeaderHomeButton onPress={() => navigation.popToTop()} />,
+        })}
+      />
       <Stack.Screen
         name="DocumentExplanation"
         component={DocumentExplanationScreen}
-        options={{ title: "Explain document" }}
+        options={({ navigation }) => ({
+          title: "Explain document",
+          headerRight: () => <HeaderHomeButton onPress={() => navigation.popToTop()} />,
+        })}
       />
     </Stack.Navigator>
   );
