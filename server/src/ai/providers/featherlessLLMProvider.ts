@@ -50,9 +50,14 @@ export class FeatherlessLLMProvider implements LLMProvider {
     const buildPrompt = (correctionNote?: string) => `You are designing a roleplay scenario to help an immigrant practice a real-life
 conversation in ${input.targetLanguage}. Their native language is ${input.nativeLanguage}.
 Situation type: "${input.situationType}".
-${input.documentText ? `Ground the scenario in this uploaded document:\n"""${input.documentText}"""` : ""}
+${input.documentText ? `Ground the scenario in this uploaded document, which belongs to the user (it is their lease, their medical notice, their letter -- not the persona's):\n"""${input.documentText}"""` : ""}
 
-Return ONLY a JSON object with keys: title, personaDescription (who the AI will roleplay as, e.g. "a landlord named Mr. Chen"), contextSummary (2-3 sentences of situational context), openingLine (what the persona says first, in ${input.targetLanguage}), keyVocabulary (array of 5-8 useful words/phrases in ${input.targetLanguage}).
+The user will play themselves -- the person actually dealing with this real-life situation.
+You must invent a persona for the OTHER party in the conversation: the specific person the user
+needs to talk to (e.g. the landlord, the doctor, the DMV clerk, the USCIS officer) -- never someone
+in the same role as the user (never another tenant, another patient, another applicant).
+
+Return ONLY a JSON object with keys: title, personaDescription (who the AI will roleplay as -- the other party, e.g. "a landlord named Mr. Chen" or "a doctor named Dr. Patel", never a role matching the user's own), contextSummary (2-3 sentences of situational context), openingLine (what the persona says first, in ${input.targetLanguage}), keyVocabulary (array of 5-8 useful words/phrases in ${input.targetLanguage}).
 ${correctionNote ? `\n${correctionNote}` : ""}`;
 
     return callForJson(generatedScenarioSchema, async (correctionNote) => {
