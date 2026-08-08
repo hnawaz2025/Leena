@@ -10,7 +10,7 @@ import { useVoiceRecording } from "../hooks/useVoiceRecording";
 import type { RootStackParamList } from "../navigation/types";
 import { useAppStore } from "../store/useAppStore";
 import { colors, radius, spacing, typography } from "../theme";
-import { toLanguageCode } from "../utils/languageCodes";
+import { getSituationExample, toLanguageCode } from "../utils/languageCodes";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ScenarioSetup">;
 
@@ -99,7 +99,7 @@ export function ScenarioSetupScreen({ route, navigation }: Props) {
         <MicButton state={nativeVoice.state} onPress={handleNativeMicPress} disabled={loading} />
         <TextField
           style={[styles.input, styles.inputFlex]}
-          placeholder="e.g. Le voy a pedir a mi casero que no suba la renta…"
+          placeholder={getSituationExample(nativeLanguage)}
           value={situationNative}
           onChangeText={setSituationNative}
           multiline
