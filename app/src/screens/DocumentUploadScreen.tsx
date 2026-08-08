@@ -49,8 +49,9 @@ export function DocumentUploadScreen({ navigation }: Props) {
         ? await ImagePicker.launchCameraAsync({ base64: true, quality: 0.7 })
         : await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.7 });
 
+    if (result.canceled) return;
     const asset = result.assets[0];
-    if (result.canceled || !asset?.base64) return;
+    if (!asset?.base64) return;
 
     setPhotoUri(asset.uri);
     setSavedDocumentId(null); // a new photo means a new document, not the previous saved one

@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Briefcase, Car, FileText, House, Plus, Stethoscope, X } from "lucide-react-native";
+import { FileText, Plus, X } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { api } from "../api/client";
@@ -7,34 +7,39 @@ import { Button } from "../components/Button";
 import { TextField } from "../components/TextField";
 import type { RootStackParamList } from "../navigation/types";
 import { useAppStore } from "../store/useAppStore";
-import { colors, radius, shadow, spacing, typography } from "../theme";
+import { colors, radius, spacing, typography } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ScenarioSetup">;
-
-const SUGGESTIONS = [
-  { icon: House, text: "Talking to my landlord about lease renewal" },
-  { icon: Car, text: "DMV appointment for a driver's license" },
-  { icon: Stethoscope, text: "First appointment with a new doctor" },
-  { icon: Briefcase, text: "Job interview for an entry-level role" },
-];
 
 export function ScenarioSetupScreen({ route, navigation }: Props) {
   const documentType = route.params?.documentType;
   const [documentId, setDocumentId] = useState(route.params?.documentId);
-  const [situationType, setSituationType] = useState("");
+  const [situationNative, setSituationNative] = useState("");
+  const [situationEnglish, setSituationEnglish] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const nativeLanguage = useAppStore((s) => s.nativeLanguage);
   const targetLanguage = useAppStore((s) => s.targetLanguage);
 
   async function handleStart() {
-    if (!situationType.trim()) {
-      setError("Describe the situation you want to practice.");
+    if (!situationNative.trim() && !situationEnglish.trim()) {
+      setError("Describe the situation you want to practice, in either language.");
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const scenario = await api.createScenario(situationType.trim(), documentId);
+      // Give the AI both versions when available -- it grounds the scenario
+      // in whichever is clearer, and it's the same native-language-first
+      // bridging the rest of the app is built around.
+      const situationType = [
+        situationNative.trim() ? `In ${nativeLanguage}: ${situationNative.trim()}` : null,
+        situationEnglish.trim() ? `In English: ${situationEnglish.trim()}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      const scenario = await api.createScenario(situationType, documentId);
       const session = await api.createSession(scenario.id);
       navigation.replace("Conversation", { sessionId: session.id, targetLanguage, scenarioId: scenario.id });
     } catch (e) {
@@ -59,35 +64,25 @@ export function ScenarioSetupScreen({ route, navigation }: Props) {
       ) : (
         <Pressable style={styles.link} onPress={() => navigation.navigate("DocumentUpload")}>
           <Plus size={14} color={colors.primary} strokeWidth={2.5} />
-          <Text style={styles.linkText}>Attach a document (lease, form, letter)</Text>
+          <Text style={styles.linkText}>Attach a document</Text>
         </Pressable>
       )}
 
-      <Text style={styles.suggestionsLabel}>Pick a common situation</Text>
-      <View style={styles.suggestionList}>
-        {SUGGESTIONS.map((s) => (
-          <Pressable
-            key={s.text}
-            style={[styles.suggestion, situationType === s.text && styles.suggestionActive]}
-            onPress={() => setSituationType(s.text)}
-          >
-            <s.icon
-              size={18}
-              color={situationType === s.text ? colors.primary : colors.textSecondary}
-              strokeWidth={2}
-              style={styles.suggestionIcon}
-            />
-            <Text style={styles.suggestionText}>{s.text}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <Text style={styles.label}>Describe your situation in {nativeLanguage || "your language"}</Text>
+      <TextField
+        style={styles.input}
+        placeholder="e.g. Le voy a pedir a mi casero que no suba la renta…"
+        value={situationNative}
+        onChangeText={setSituationNative}
+        multiline
+      />
 
-      <Text style={styles.suggestionsLabel}>Or describe your own</Text>
+      <Text style={styles.label}>Describe it in English</Text>
       <TextField
         style={styles.input}
         placeholder="e.g. Talking to my landlord about a lease renewal"
-        value={situationType}
-        onChangeText={setSituationType}
+        value={situationEnglish}
+        onChangeText={setSituationEnglish}
         multiline
       />
 
@@ -115,22 +110,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   documentBadgeText: { ...typography.caption, flex: 1, fontFamily: typography.bodyBold.fontFamily, color: colors.primaryDark },
-  suggestionsLabel: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.textSecondary, marginBottom: spacing.md },
-  suggestionList: { marginBottom: spacing.xl, gap: spacing.sm },
-  suggestion: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    ...shadow.subtle,
-  },
-  suggestionActive: {
-    backgroundColor: colors.surfaceWarm,
-  },
-  suggestionIcon: { marginRight: spacing.md },
-  suggestionText: { ...typography.body, flex: 1 },
+  label: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.textSecondary, marginBottom: spacing.md },
   input: {
     minHeight: 70,
     textAlignVertical: "top",

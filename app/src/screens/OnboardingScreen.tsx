@@ -11,18 +11,9 @@ import { colors, spacing, typography } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 
-const COMMON_LANGUAGES = [
-  "Spanish",
-  "Mandarin",
-  "Hindi",
-  "Arabic",
-  "Portuguese",
-  "Vietnamese",
-  "Tagalog",
-  "Korean",
-  "Russian",
-  "French",
-];
+// Scoped to 3 for the hackathon demo to showcase the value clearly;
+// more languages are a post-hackathon addition, not a technical limitation.
+const COMMON_LANGUAGES = ["Spanish", "Mandarin", "Hindi"];
 
 export function OnboardingScreen({ navigation }: Props) {
   const [nativeLanguage, setNativeLanguage] = useState("");
