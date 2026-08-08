@@ -2,7 +2,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import * as Speech from "expo-speech";
 import { LinearGradient } from "expo-linear-gradient";
-import { Drama, Mic, Send, Square } from "lucide-react-native";
+import { Drama, Send } from "lucide-react-native";
 import { useState } from "react";
 import {
   FlatList,
@@ -16,6 +16,7 @@ import {
 import { api } from "../api/client";
 import { BreathingDot } from "../components/BreathingDot";
 import { ChatBubble } from "../components/ChatBubble";
+import { MicButton } from "../components/MicButton";
 import { TextField } from "../components/TextField";
 import { useVoiceRecording } from "../hooks/useVoiceRecording";
 import type { RootStackParamList } from "../navigation/types";
@@ -50,7 +51,7 @@ export function ConversationScreen({ route, navigation }: Props) {
     if (voice.state === "idle") {
       await voice.startRecording();
     } else if (voice.state === "recording") {
-      const text = await voice.stopRecordingAndTranscribe();
+      const text = await voice.stopRecordingAndTranscribe("en");
       if (text) setInput((prev) => (prev ? `${prev} ${text}` : text));
     }
   }
@@ -89,7 +90,6 @@ export function ConversationScreen({ route, navigation }: Props) {
   }
 
   const isRecording = voice.state === "recording";
-  const isTranscribing = voice.state === "transcribing";
 
   return (
     <KeyboardAvoidingView
@@ -133,19 +133,7 @@ export function ConversationScreen({ route, navigation }: Props) {
       {(error || voice.error) ? <Text style={styles.error}>{error || voice.error}</Text> : null}
 
       <View style={styles.inputRow}>
-        <Pressable
-          style={[styles.micButton, isRecording && styles.micButtonActive]}
-          onPress={handleMicPress}
-          disabled={isTranscribing || sending}
-        >
-          {isTranscribing ? (
-            <BreathingDot size={16} />
-          ) : isRecording ? (
-            <Square size={16} color={colors.white} strokeWidth={2} fill={colors.white} />
-          ) : (
-            <Mic size={18} color={colors.textSecondary} strokeWidth={2} />
-          )}
-        </Pressable>
+        <MicButton state={voice.state} onPress={handleMicPress} disabled={sending} />
         <TextField
           style={styles.input}
           placeholder={`Type or speak in ${targetLanguage}…`}
@@ -212,17 +200,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.surface,
-  },
-  micButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.background,
-  },
-  micButtonActive: {
-    backgroundColor: colors.error,
   },
   input: { flex: 1 },
   sendButton: {

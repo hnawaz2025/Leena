@@ -4,10 +4,13 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { api } from "../api/client";
 import { Button } from "../components/Button";
+import { MicButton } from "../components/MicButton";
 import { TextField } from "../components/TextField";
+import { useVoiceRecording } from "../hooks/useVoiceRecording";
 import type { RootStackParamList } from "../navigation/types";
 import { useAppStore } from "../store/useAppStore";
 import { colors, radius, spacing, typography } from "../theme";
+import { toLanguageCode } from "../utils/languageCodes";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ScenarioSetup">;
 
@@ -20,6 +23,29 @@ export function ScenarioSetupScreen({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const nativeLanguage = useAppStore((s) => s.nativeLanguage);
   const targetLanguage = useAppStore((s) => s.targetLanguage);
+
+  const nativeVoice = useVoiceRecording();
+  const englishVoice = useVoiceRecording();
+
+  async function handleNativeMicPress() {
+    setError(null);
+    if (nativeVoice.state === "idle") {
+      await nativeVoice.startRecording();
+    } else if (nativeVoice.state === "recording") {
+      const text = await nativeVoice.stopRecordingAndTranscribe(toLanguageCode(nativeLanguage));
+      if (text) setSituationNative((prev) => (prev ? `${prev} ${text}` : text));
+    }
+  }
+
+  async function handleEnglishMicPress() {
+    setError(null);
+    if (englishVoice.state === "idle") {
+      await englishVoice.startRecording();
+    } else if (englishVoice.state === "recording") {
+      const text = await englishVoice.stopRecordingAndTranscribe("en");
+      if (text) setSituationEnglish((prev) => (prev ? `${prev} ${text}` : text));
+    }
+  }
 
   async function handleStart() {
     if (!situationNative.trim() && !situationEnglish.trim()) {
@@ -69,22 +95,30 @@ export function ScenarioSetupScreen({ route, navigation }: Props) {
       )}
 
       <Text style={styles.label}>Describe your situation in {nativeLanguage || "your language"}</Text>
-      <TextField
-        style={styles.input}
-        placeholder="e.g. Le voy a pedir a mi casero que no suba la renta…"
-        value={situationNative}
-        onChangeText={setSituationNative}
-        multiline
-      />
+      <View style={styles.inputRow}>
+        <MicButton state={nativeVoice.state} onPress={handleNativeMicPress} disabled={loading} />
+        <TextField
+          style={[styles.input, styles.inputFlex]}
+          placeholder="e.g. Le voy a pedir a mi casero que no suba la renta…"
+          value={situationNative}
+          onChangeText={setSituationNative}
+          multiline
+        />
+      </View>
+      {nativeVoice.error ? <Text style={styles.error}>{nativeVoice.error}</Text> : null}
 
       <Text style={styles.label}>Describe it in English</Text>
-      <TextField
-        style={styles.input}
-        placeholder="e.g. Talking to my landlord about a lease renewal"
-        value={situationEnglish}
-        onChangeText={setSituationEnglish}
-        multiline
-      />
+      <View style={styles.inputRow}>
+        <MicButton state={englishVoice.state} onPress={handleEnglishMicPress} disabled={loading} />
+        <TextField
+          style={[styles.input, styles.inputFlex]}
+          placeholder="e.g. Talking to my landlord about a lease renewal"
+          value={situationEnglish}
+          onChangeText={setSituationEnglish}
+          multiline
+        />
+      </View>
+      {englishVoice.error ? <Text style={styles.error}>{englishVoice.error}</Text> : null}
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -111,11 +145,12 @@ const styles = StyleSheet.create({
   },
   documentBadgeText: { ...typography.caption, flex: 1, fontFamily: typography.bodyBold.fontFamily, color: colors.primaryDark },
   label: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.textSecondary, marginBottom: spacing.md },
+  inputRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, marginBottom: spacing.xs },
   input: {
     minHeight: 70,
     textAlignVertical: "top",
-    marginBottom: spacing.lg,
   },
+  inputFlex: { flex: 1 },
   button: { marginTop: spacing.sm },
-  error: { ...typography.caption, color: colors.error, marginBottom: spacing.md },
+  error: { ...typography.caption, color: colors.error, marginBottom: spacing.lg },
 });

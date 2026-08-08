@@ -95,9 +95,9 @@ export const api = {
   getFeedback: (sessionId: string) =>
     request<import("@leena/shared").FeedbackReportDTO>(`/sessions/${sessionId}/feedback`),
 
-  transcribe: (audioBase64: string, mimeType: string) =>
+  transcribe: (audioBase64: string, mimeType: string, language?: string) =>
     request<{ text: string }>("/speech/transcribe", {
       method: "POST",
-      body: JSON.stringify({ audio: audioBase64, mimeType }),
+      body: JSON.stringify({ audio: audioBase64, mimeType, language }),
     }),
 };

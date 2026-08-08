@@ -56,7 +56,7 @@ export function useVoiceRecording() {
     }
   }
 
-  async function stopRecordingAndTranscribe(): Promise<string | null> {
+  async function stopRecordingAndTranscribe(language?: string): Promise<string | null> {
     const recording = recordingRef.current;
     if (!recording) return null;
 
@@ -70,7 +70,7 @@ export function useVoiceRecording() {
       const audioBase64 = await readUriAsBase64(uri);
       const mimeType = Platform.OS === "web" ? "audio/webm" : "audio/m4a";
 
-      const result = await api.transcribe(audioBase64, mimeType);
+      const result = await api.transcribe(audioBase64, mimeType, language);
       return result.text;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't hear that, try again.");
