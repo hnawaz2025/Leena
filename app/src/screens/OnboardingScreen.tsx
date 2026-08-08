@@ -4,7 +4,6 @@ import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { api } from "../api/client";
 import { Button } from "../components/Button";
 import { Chip } from "../components/Chip";
-import { TextField } from "../components/TextField";
 import type { RootStackParamList } from "../navigation/types";
 import { useAppStore } from "../store/useAppStore";
 import { colors, spacing, typography } from "../theme";
@@ -17,24 +16,20 @@ const COMMON_LANGUAGES = ["Spanish", "Mandarin", "Hindi"];
 
 export function OnboardingScreen({ navigation }: Props) {
   const [nativeLanguage, setNativeLanguage] = useState("");
-  const [showOtherInput, setShowOtherInput] = useState(false);
-  const [customLanguage, setCustomLanguage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const setProfile = useAppStore((s) => s.setProfile);
 
-  const selectedLanguage = showOtherInput ? customLanguage.trim() : nativeLanguage;
-
   async function handleContinue() {
-    if (!selectedLanguage) {
+    if (!nativeLanguage) {
       setError("Tell us your native language first.");
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      await api.identify(selectedLanguage, "English");
-      setProfile(selectedLanguage, "English");
+      await api.identify(nativeLanguage, "English");
+      setProfile(nativeLanguage, "English");
       navigation.replace("Home");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -52,7 +47,8 @@ export function OnboardingScreen({ navigation }: Props) {
       />
       <Text style={styles.title}>Welcome to Leena</Text>
       <Text style={styles.subtitle}>
-        Practice real conversations before they happen — in your own language first.
+        Practice real English conversations before they happen - using your native language as
+        support whenever you get stuck.
       </Text>
 
       <Text style={styles.label}>Your native language</Text>
@@ -61,26 +57,11 @@ export function OnboardingScreen({ navigation }: Props) {
           <Chip
             key={lang}
             label={lang}
-            selected={!showOtherInput && nativeLanguage === lang}
-            onPress={() => {
-              setShowOtherInput(false);
-              setNativeLanguage(lang);
-            }}
+            selected={nativeLanguage === lang}
+            onPress={() => setNativeLanguage(lang)}
           />
         ))}
-        <Chip label="Other" selected={showOtherInput} onPress={() => setShowOtherInput(true)} />
       </View>
-
-      {showOtherInput ? (
-        <TextField
-          style={styles.customInput}
-          placeholder="Type your native language"
-          value={customLanguage}
-          onChangeText={setCustomLanguage}
-        />
-      ) : null}
-
-      <Text style={styles.note}>You'll be practicing: English</Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -95,9 +76,7 @@ const styles = StyleSheet.create({
   title: { ...typography.display, marginBottom: spacing.sm, textAlign: "center" },
   subtitle: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xxl, textAlign: "center" },
   label: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.textPrimary, marginBottom: spacing.md },
-  chipGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.lg },
-  customInput: { marginBottom: spacing.lg },
-  note: { ...typography.caption, color: colors.textMuted, marginBottom: spacing.xl },
+  chipGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginBottom: spacing.xl },
   button: { marginTop: spacing.sm },
   error: { ...typography.caption, color: colors.error, marginBottom: spacing.md },
 });
