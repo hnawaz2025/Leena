@@ -1,27 +1,22 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
-import { Briefcase, FileText, House, Lock, Stethoscope } from "lucide-react-native";
+import { Camera, Image as ImageIcon, Lock } from "lucide-react-native";
 import { useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { api } from "../api/client";
 import { BreathingDot } from "../components/BreathingDot";
 import { Button } from "../components/Button";
-import { Chip } from "../components/Chip";
 import { TextField } from "../components/TextField";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, radius, spacing, typography } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "DocumentUpload">;
 
-const DOCUMENT_TYPES = [
-  { value: "lease", label: "Lease", icon: House },
-  { value: "medical", label: "Medical", icon: Stethoscope },
-  { value: "job-letter", label: "Job letter", icon: Briefcase },
-  { value: "other", label: "Other", icon: FileText },
-] as const;
+// No user-facing document-type picker -- the AI infers what it needs from the
+// content itself. "other" is just the DB's generic bucket.
+const DOCUMENT_TYPE = "other";
 
 export function DocumentUploadScreen({ navigation }: Props) {
-  const [type, setType] = useState<(typeof DOCUMENT_TYPES)[number]["value"]>("lease");
   const [text, setText] = useState("");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [savedDocumentId, setSavedDocumentId] = useState<string | null>(null);
@@ -71,7 +66,7 @@ export function DocumentUploadScreen({ navigation }: Props) {
 
   async function ensureSaved(): Promise<string> {
     if (savedDocumentId) return savedDocumentId;
-    const document = await api.createDocument(type, text.trim());
+    const document = await api.createDocument(DOCUMENT_TYPE, text.trim());
     setSavedDocumentId(document.id);
     return document.id;
   }
@@ -85,7 +80,7 @@ export function DocumentUploadScreen({ navigation }: Props) {
     setError(null);
     try {
       const documentId = await ensureSaved();
-      navigation.navigate("ScenarioSetup", { documentId, documentType: type });
+      navigation.navigate("ScenarioSetup", { documentId });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -102,7 +97,7 @@ export function DocumentUploadScreen({ navigation }: Props) {
     setError(null);
     try {
       const documentId = await ensureSaved();
-      navigation.navigate("DocumentExplanation", { documentId, documentType: type });
+      navigation.navigate("DocumentExplanation", { documentId, documentType: DOCUMENT_TYPE });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -122,39 +117,23 @@ export function DocumentUploadScreen({ navigation }: Props) {
         <Text style={styles.trustNote}>Only used for what you ask below — never shared.</Text>
       </View>
 
-      <Text style={styles.label}>What kind of document?</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.typeRow}
-        contentContainerStyle={styles.typeRowContent}
-      >
-        {DOCUMENT_TYPES.map((t) => (
-          <Chip
-            key={t.value}
-            label={t.label}
-            icon={t.icon}
-            selected={type === t.value}
-            onPress={() => setType(t.value)}
-          />
-        ))}
-      </ScrollView>
-
       <View style={styles.photoButtonRow}>
-        <Button
-          label="Take photo"
-          variant="secondary"
+        <Pressable
+          style={styles.photoButton}
           onPress={() => handlePickImage("camera")}
           disabled={scanning}
+        >
+          <Camera size={16} color={colors.primary} strokeWidth={2} />
+          <Text style={styles.photoButtonText}>Take Photo</Text>
+        </Pressable>
+        <Pressable
           style={styles.photoButton}
-        />
-        <Button
-          label="Choose photo"
-          variant="secondary"
           onPress={() => handlePickImage("library")}
           disabled={scanning}
-          style={styles.photoButton}
-        />
+        >
+          <ImageIcon size={16} color={colors.primary} strokeWidth={2} />
+          <Text style={styles.photoButtonText}>Choose Photo</Text>
+        </Pressable>
       </View>
 
       {photoUri ? (
@@ -218,11 +197,19 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.md },
   trustNoteRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs, marginBottom: spacing.xl },
   trustNote: { ...typography.caption, color: colors.textMuted },
-  label: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.textPrimary, marginBottom: spacing.md },
-  typeRow: { marginBottom: spacing.lg },
-  typeRowContent: { flexDirection: "row", gap: spacing.sm },
-  photoButtonRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md },
-  photoButton: { flex: 1 },
+  photoButtonRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.lg },
+  photoButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.button,
+    paddingVertical: spacing.sm,
+  },
+  photoButtonText: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.primary },
   photoPreviewRow: {
     flexDirection: "row",
     alignItems: "center",

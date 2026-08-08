@@ -15,7 +15,6 @@ import { getSituationExample, toLanguageCode } from "../utils/languageCodes";
 type Props = NativeStackScreenProps<RootStackParamList, "ScenarioSetup">;
 
 export function ScenarioSetupScreen({ route, navigation }: Props) {
-  const documentType = route.params?.documentType;
   const [documentId, setDocumentId] = useState(route.params?.documentId);
   const [situationNative, setSituationNative] = useState("");
   const [situationEnglish, setSituationEnglish] = useState("");
@@ -82,7 +81,7 @@ export function ScenarioSetupScreen({ route, navigation }: Props) {
       {documentId ? (
         <View style={styles.documentBadge}>
           <FileText size={13} color={colors.primaryDark} strokeWidth={2} />
-          <Text style={styles.documentBadgeText}>Using your {documentType} document</Text>
+          <Text style={styles.documentBadgeText}>Using your attached document</Text>
           <Pressable onPress={() => setDocumentId(undefined)} hitSlop={8}>
             <X size={14} color={colors.primaryDark} strokeWidth={2.5} />
           </Pressable>
