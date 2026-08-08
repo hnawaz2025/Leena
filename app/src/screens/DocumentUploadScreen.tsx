@@ -109,8 +109,8 @@ export function DocumentUploadScreen({ navigation }: Props) {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Add a document</Text>
       <Text style={styles.subtitle}>
-        Photograph, attach, or paste a lease, form, or letter — to practice a conversation about
-        it, or just have it explained in plain language.
+        Photograph, attach, or paste a document — practice a conversation about it, or get it
+        explained in plain language.
       </Text>
       <View style={styles.trustNoteRow}>
         <Lock size={13} color={colors.textMuted} strokeWidth={2} />
