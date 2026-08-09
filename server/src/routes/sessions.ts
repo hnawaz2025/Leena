@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { FeedbackReportDTO, SessionDTO, TurnDTO } from "@leena/shared";
+import type { FeedbackReportDTO, HelpSuggestionDTO, SessionDTO, TurnDTO } from "@leena/shared";
 import { getLLMProvider } from "../ai";
 import { prisma } from "../db";
 import { asyncHandler } from "../middleware/asyncHandler";
@@ -211,6 +211,68 @@ sessionsRouter.get(
       createdAt: feedback.createdAt.toISOString(),
     };
     res.json(dto);
+  })
+);
+
+const helpSchema = z.object({
+  nativeLanguageText: z.string().min(1),
+  nativeLanguage: z.string().min(2),
+});
+
+sessionsRouter.post(
+  "/:id/help",
+  requireUser,
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const parsed = helpSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+    const session = await prisma.session.findFirst({
+      where: { id: req.params.id, userId: req.userId! },
+      include: { scenario: true, turns: { orderBy: { createdAt: "asc" } } },
+    });
+    if (!session) return res.status(404).json({ error: "Session not found" });
+
+    // Deliberately never touches Turn/chatTurn -- the persona must never see
+    // or react to a help request, only the eventual normal Send.
+    const result = await getLLMProvider().suggestPhrase({
+      personaDescription: session.scenario.personaDescription,
+      contextSummary: session.scenario.contextSummary,
+      targetLanguage: session.scenario.language,
+      history: session.turns.map((t) => ({ speaker: t.speaker as "user" | "agent", text: t.text })),
+      nativeLanguageText: parsed.data.nativeLanguageText,
+      nativeLanguage: parsed.data.nativeLanguage,
+    });
+
+    const event = await prisma.translationAssistEvent.create({
+      data: {
+        userId: req.userId!,
+        sessionId: session.id,
+        nativeLanguage: parsed.data.nativeLanguage,
+        nativeLanguageText: parsed.data.nativeLanguageText,
+        suggestedText: result.suggestedText,
+      },
+    });
+
+    const dto: HelpSuggestionDTO = { id: event.id, suggestedText: event.suggestedText };
+    res.status(201).json(dto);
+  })
+);
+
+sessionsRouter.post(
+  "/:id/help/:eventId/use",
+  requireUser,
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const event = await prisma.translationAssistEvent.findFirst({
+      where: { id: req.params.eventId, sessionId: req.params.id, userId: req.userId! },
+    });
+    if (!event) return res.status(404).json({ error: "Help suggestion not found" });
+
+    await prisma.translationAssistEvent.update({
+      where: { id: event.id },
+      data: { wasUsed: true },
+    });
+
+    res.status(204).end();
   })
 );
 

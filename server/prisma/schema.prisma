@@ -8,15 +8,16 @@ datasource db {
 }
 
 model User {
-  id             String     @id @default(uuid())
-  deviceId       String     @unique
-  authToken      String     @unique
-  nativeLanguage String
-  targetLanguage String
-  createdAt      DateTime   @default(now())
-  documents      Document[]
-  scenarios      Scenario[]
-  sessions       Session[]
+  id                      String                   @id @default(uuid())
+  deviceId                String                   @unique
+  authToken               String                   @unique
+  nativeLanguage          String
+  targetLanguage          String
+  createdAt               DateTime                 @default(now())
+  documents               Document[]
+  scenarios               Scenario[]
+  sessions                Session[]
+  translationAssistEvents TranslationAssistEvent[]
 }
 
 model Document {
@@ -61,16 +62,17 @@ model Scenario {
 }
 
 model Session {
-  id         String          @id @default(uuid())
-  userId     String
-  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  scenarioId String
-  scenario   Scenario        @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  startedAt  DateTime        @default(now())
-  endedAt    DateTime?
-  status     String          @default("active")
-  turns      Turn[]
-  feedback   FeedbackReport?
+  id                      String                   @id @default(uuid())
+  userId                  String
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenarioId              String
+  scenario                Scenario                 @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  startedAt               DateTime                 @default(now())
+  endedAt                 DateTime?
+  status                  String                   @default("active")
+  turns                   Turn[]
+  feedback                FeedbackReport?
+  translationAssistEvents TranslationAssistEvent[]
 
   @@index([userId])
   @@index([scenarioId])
@@ -97,4 +99,24 @@ model FeedbackReport {
   struggleAreas         Json
   vocabularySuggestions Json
   createdAt             DateTime @default(now())
+}
+
+// Deliberately separate from Turn: a help-request must never leak into
+// chatTurn's history or analyzeSession's transcript. Kept for a future
+// WHOOP-style metrics dashboard (usage patterns, e.g. "used help mostly on
+// medical vocabulary"), not consumed by anything yet.
+model TranslationAssistEvent {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId          String
+  session            Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  nativeLanguage     String
+  nativeLanguageText String
+  suggestedText      String
+  wasUsed            Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
 }

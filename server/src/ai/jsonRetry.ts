@@ -14,9 +14,26 @@ function extractJsonBlock(raw: string): string {
   return match[0];
 }
 
+const CJK_RANGE = /[一-鿿぀-ヿ가-힯]/;
+
+// Small open-weight models (the free Featherless path) have shown a real
+// failure mode: stray Chinese/Japanese/Korean characters leaking into output
+// meant to be in a different language (seen first in explainDocument's
+// Spanish output). This is a cheap, targeted check for exactly that -- not a
+// general translation-quality check.
+export function assertNoUnexpectedScript(text: string, expectedLanguage: string): void {
+  const isCjkExpected = /chinese|mandarin|japanese|korean/i.test(expectedLanguage);
+  if (!isCjkExpected && CJK_RANGE.test(text)) {
+    throw new Error(
+      `Unexpected CJK characters in output meant to be ${expectedLanguage}: ${text}`
+    );
+  }
+}
+
 export async function callForJson<T>(
   schema: z.ZodType<T>,
-  callModel: (correctionNote?: string) => Promise<string>
+  callModel: (correctionNote?: string) => Promise<string>,
+  validate?: (parsed: T) => void
 ): Promise<T> {
   let lastError: unknown;
 
@@ -24,8 +41,9 @@ export async function callForJson<T>(
     const correctionNote = attempt === 0 ? undefined : JSON_CORRECTION_NOTE;
     try {
       const text = await callModel(correctionNote);
-      const parsed = JSON.parse(extractJsonBlock(text));
-      return schema.parse(parsed);
+      const parsed = schema.parse(JSON.parse(extractJsonBlock(text)));
+      validate?.(parsed);
+      return parsed;
     } catch (error) {
       lastError = error;
     }

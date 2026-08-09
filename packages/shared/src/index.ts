@@ -63,3 +63,8 @@ export interface ChatTurnRequest {
   text: string;
   language: Language;
 }
+
+export interface HelpSuggestionDTO {
+  id: string;
+  suggestedText: string;
+}

@@ -1,6 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { callForJson } from "../jsonRetry";
-import { analyzeSessionResultSchema, documentExplanationSchema, generatedScenarioSchema } from "../schemas";
+import { assertNoUnexpectedScript, callForJson } from "../jsonRetry";
+import {
+  analyzeSessionResultSchema,
+  documentExplanationSchema,
+  generatedScenarioSchema,
+  suggestedPhraseSchema,
+} from "../schemas";
 import type {
   AnalyzeSessionInput,
   AnalyzeSessionResult,
@@ -13,6 +18,8 @@ import type {
   GenerateScenarioInput,
   GeneratedScenario,
   LLMProvider,
+  SuggestPhraseInput,
+  SuggestPhraseResult,
 } from "../types";
 
 const MODEL = "claude-sonnet-5";
@@ -23,6 +30,7 @@ const MODEL = "claude-sonnet-5";
 const MAX_HISTORY_TURNS_FOR_CHAT = 16;
 const MAX_TRANSCRIPT_TURNS_FOR_ANALYSIS = 60;
 const MAX_DOCUMENT_CHARS_FOR_EXPLANATION = 8000;
+const MAX_HISTORY_TURNS_FOR_HELP = 8;
 
 export class AnthropicLLMProvider implements LLMProvider {
   private client: Anthropic;
@@ -160,5 +168,42 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
       throw new Error("Couldn't read any text in that photo. Try a clearer, well-lit picture.");
     }
     return { text: text.trim() };
+  }
+
+  async suggestPhrase(input: SuggestPhraseInput): Promise<SuggestPhraseResult> {
+    const recentHistory = input.history.slice(-MAX_HISTORY_TURNS_FOR_HELP);
+    const historyText = recentHistory.map((t) => `${t.speaker.toUpperCase()}: ${t.text}`).join("\n");
+
+    const buildPrompt = (correctionNote?: string) => `You are a translation coach helping a language learner during a live roleplay
+practice conversation. The learner is talking to: ${input.personaDescription}.
+Context: ${input.contextSummary}
+Recent conversation so far:
+${historyText || "(nothing said yet)"}
+
+The learner is stuck on how to say something in ${input.targetLanguage}. They said, in their
+native language (${input.nativeLanguage}):
+"""${input.nativeLanguageText}"""
+
+Give them natural, conversational ${input.targetLanguage} phrasing they could say next in THIS
+conversation, appropriate for speaking to ${input.personaDescription} in this context. Match the
+register and situation -- do not produce a textbook translation disconnected from the
+conversation. Keep it to 1-2 short sentences, the way a real person would actually say it out loud.
+
+Return ONLY a JSON object with key: suggestedText (the phrase in ${input.targetLanguage}, written
+naturally, no notes/explanations, no ${input.nativeLanguage} text mixed in).
+${correctionNote ? `\n${correctionNote}` : ""}`;
+
+    return callForJson(
+      suggestedPhraseSchema,
+      async (correctionNote) => {
+        const response = await this.client.messages.create({
+          model: MODEL,
+          max_tokens: 300,
+          messages: [{ role: "user", content: buildPrompt(correctionNote) }],
+        });
+        return response.content.find((b) => b.type === "text")?.text ?? "";
+      },
+      (parsed) => assertNoUnexpectedScript(parsed.suggestedText, input.targetLanguage)
+    );
   }
 }

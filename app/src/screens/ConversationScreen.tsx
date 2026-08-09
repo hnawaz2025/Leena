@@ -2,7 +2,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import * as Speech from "expo-speech";
 import { LinearGradient } from "expo-linear-gradient";
-import { Drama, Send } from "lucide-react-native";
+import { Drama, Languages, Send } from "lucide-react-native";
 import { useState } from "react";
 import {
   FlatList,
@@ -16,10 +16,12 @@ import {
 import { api } from "../api/client";
 import { BreathingDot } from "../components/BreathingDot";
 import { ChatBubble } from "../components/ChatBubble";
+import { HelpMeSayThisPanel } from "../components/HelpMeSayThisPanel";
 import { MicButton } from "../components/MicButton";
 import { TextField } from "../components/TextField";
 import { useVoiceRecording } from "../hooks/useVoiceRecording";
 import type { RootStackParamList } from "../navigation/types";
+import { useAppStore } from "../store/useAppStore";
 import { colors, gradients, spacing, typography } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Conversation">;
@@ -34,7 +36,9 @@ export function ConversationScreen({ route, navigation }: Props) {
   const [sending, setSending] = useState(false);
   const [ending, setEnding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [helpPanelOpen, setHelpPanelOpen] = useState(false);
   const voice = useVoiceRecording();
+  const nativeLanguage = useAppStore((s) => s.nativeLanguage);
 
   const { data: scenario } = useQuery({
     queryKey: ["scenario", scenarioId],
@@ -132,6 +136,23 @@ export function ConversationScreen({ route, navigation }: Props) {
       {isRecording ? <Text style={styles.listeningNote}>Listening…</Text> : null}
       {(error || voice.error) ? <Text style={styles.error}>{error || voice.error}</Text> : null}
 
+      {helpPanelOpen ? (
+        <HelpMeSayThisPanel
+          sessionId={sessionId}
+          nativeLanguage={nativeLanguage}
+          onUse={(englishText) => {
+            setInput((prev) => (prev ? `${prev} ${englishText}` : englishText));
+            setHelpPanelOpen(false);
+          }}
+          onClose={() => setHelpPanelOpen(false)}
+        />
+      ) : (
+        <Pressable style={styles.helpButton} onPress={() => setHelpPanelOpen(true)}>
+          <Languages size={14} color={colors.primary} strokeWidth={2.5} />
+          <Text style={styles.helpButtonText}>Stuck? Help me say this</Text>
+        </Pressable>
+      )}
+
       <View style={styles.inputRow}>
         <MicButton state={voice.state} onPress={handleMicPress} disabled={sending} />
         <TextField
@@ -192,6 +213,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: spacing.xs,
   },
+  helpButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+  },
+  helpButtonText: { ...typography.caption, color: colors.primary, fontFamily: typography.bodyBold.fontFamily },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",

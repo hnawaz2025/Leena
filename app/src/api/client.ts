@@ -100,4 +100,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ audio: audioBase64, mimeType, language }),
     }),
+
+  requestHelpPhrase: (sessionId: string, nativeLanguageText: string, nativeLanguage: string) =>
+    request<import("@leena/shared").HelpSuggestionDTO>(`/sessions/${sessionId}/help`, {
+      method: "POST",
+      body: JSON.stringify({ nativeLanguageText, nativeLanguage }),
+    }),
+
+  markHelpPhraseUsed: (sessionId: string, eventId: string) =>
+    request<void>(`/sessions/${sessionId}/help/${eventId}/use`, { method: "POST" }),
 };

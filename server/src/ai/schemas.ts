@@ -36,3 +36,8 @@ export const documentExplanationSchema = z.object({
   actionItems: z.array(z.string()),
 });
 export type DocumentExplanation = z.infer<typeof documentExplanationSchema>;
+
+export const suggestedPhraseSchema = z.object({
+  suggestedText: z.string().min(1),
+});
+export type SuggestedPhrase = z.infer<typeof suggestedPhraseSchema>;

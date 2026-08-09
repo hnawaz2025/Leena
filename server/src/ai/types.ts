@@ -41,12 +41,26 @@ export interface ExtractDocumentTextResult {
   text: string;
 }
 
+export interface SuggestPhraseInput {
+  personaDescription: string;
+  contextSummary: string;
+  targetLanguage: string;
+  history: { speaker: "user" | "agent"; text: string }[];
+  nativeLanguageText: string;
+  nativeLanguage: string;
+}
+
+export interface SuggestPhraseResult {
+  suggestedText: string;
+}
+
 export interface LLMProvider {
   generateScenario(input: GenerateScenarioInput): Promise<GeneratedScenario>;
   chatTurn(input: ChatTurnInput): Promise<ChatTurnResult>;
   analyzeSession(input: AnalyzeSessionInput): Promise<AnalyzeSessionResult>;
   explainDocument(input: ExplainDocumentInput): Promise<DocumentExplanation>;
   extractDocumentText(input: ExtractDocumentTextInput): Promise<ExtractDocumentTextResult>;
+  suggestPhrase(input: SuggestPhraseInput): Promise<SuggestPhraseResult>;
 }
 
 export interface TranscribeInput {
