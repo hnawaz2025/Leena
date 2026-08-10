@@ -3,7 +3,6 @@ import { HeaderHomeButton } from "../components/HeaderHomeButton";
 import { ConversationScreen } from "../screens/ConversationScreen";
 import { DocumentExplanationScreen } from "../screens/DocumentExplanationScreen";
 import { DocumentUploadScreen } from "../screens/DocumentUploadScreen";
-import { FeedbackScreen } from "../screens/FeedbackScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { OnboardingScreen } from "../screens/OnboardingScreen";
 import { ScenarioSetupScreen } from "../screens/ScenarioSetupScreen";
@@ -45,7 +44,6 @@ export function RootNavigator() {
         component={ConversationScreen}
         options={{ title: "Practice conversation" }}
       />
-      <Stack.Screen name="Feedback" component={FeedbackScreen} options={{ title: "Feedback" }} />
       <Stack.Screen
         name="DocumentExplanation"
         component={DocumentExplanationScreen}

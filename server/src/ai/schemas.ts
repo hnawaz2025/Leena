@@ -15,13 +15,17 @@ export type GeneratedScenario = z.infer<typeof generatedScenarioSchema>;
 
 export const analyzeSessionResultSchema = z.object({
   summary: z.string().min(1),
+  summaryNative: z.string().min(1),
   struggleAreas: z.array(z.string()),
+  struggleAreasNative: z.array(z.string()),
   vocabularySuggestions: z.array(
     z.object({
       term: z.string().min(1),
       note: z.string().min(1),
     })
   ),
+  conversationSummary: z.string().min(1),
+  conversationSummaryNative: z.string().min(1),
 });
 export type AnalyzeSessionResult = z.infer<typeof analyzeSessionResultSchema>;
 

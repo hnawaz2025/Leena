@@ -51,6 +51,7 @@ model Scenario {
   documentId         String?
   document           Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
   title              String
+  situationType      String    @default("")
   personaDescription String
   contextSummary     String
   language           String
@@ -92,13 +93,17 @@ model Turn {
 }
 
 model FeedbackReport {
-  id                    String   @id @default(uuid())
-  sessionId             String   @unique
-  session               Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  summary               String
-  struggleAreas         Json
-  vocabularySuggestions Json
-  createdAt             DateTime @default(now())
+  id                        String   @id @default(uuid())
+  sessionId                 String   @unique
+  session                   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  summary                   String
+  summaryNative             String   @default("")
+  struggleAreas             Json
+  struggleAreasNative       Json     @default("[]")
+  vocabularySuggestions     Json
+  conversationSummary       String   @default("")
+  conversationSummaryNative String   @default("")
+  createdAt                 DateTime @default(now())
 }
 
 // Deliberately separate from Turn: a help-request must never leak into

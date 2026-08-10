@@ -9,24 +9,14 @@ import { EmptyState } from "../components/EmptyState";
 import { FadeInItem } from "../components/FadeInItem";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, spacing, typography } from "../theme";
+import { relativeDate } from "../utils/relativeDate";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
-function relativeDate(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
-}
-
 export function HomeScreen({ navigation }: Props) {
-  const { data: sessions, isLoading } = useQuery({
-    queryKey: ["sessions"],
-    queryFn: api.listSessions,
+  const { data: scenarios, isLoading } = useQuery({
+    queryKey: ["scenarios"],
+    queryFn: api.listScenarios,
   });
 
   return (
@@ -44,7 +34,7 @@ export function HomeScreen({ navigation }: Props) {
         <Text style={styles.loading}>Loading…</Text>
       ) : (
         <FlatList
-          data={sessions ?? []}
+          data={scenarios ?? []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
@@ -55,30 +45,23 @@ export function HomeScreen({ navigation }: Props) {
           }
           renderItem={({ item, index }) => (
             <FadeInItem index={index}>
-              <Pressable
-                onPress={() =>
-                  item.status === "completed"
-                    ? navigation.navigate("Feedback", { sessionId: item.id, scenarioId: item.scenarioId })
-                    : navigation.navigate("Conversation", {
-                        sessionId: item.id,
-                        targetLanguage: "English",
-                        scenarioId: item.scenarioId,
-                      })
-                }
-              >
+              <Pressable onPress={() => navigation.navigate("Conversation", { scenarioId: item.id })}>
                 <Card
-                  accentColor={item.status === "completed" ? colors.success : colors.primary}
+                  accentColor={item.latestStatus === "completed" ? colors.success : colors.primary}
                   style={styles.card}
                 >
                   <View style={styles.cardRow}>
                     <View style={styles.cardTextGroup}>
                       <Text style={styles.cardTitle} numberOfLines={1}>
-                        {item.scenarioTitle}
+                        {item.title}
                       </Text>
-                      <Text style={styles.cardMeta}>{relativeDate(item.startedAt)}</Text>
+                      <Text style={styles.cardMeta}>
+                        {relativeDate(item.latestStartedAt)}
+                        {item.attemptCount > 1 ? ` · Practice ${item.attemptCount}` : ""}
+                      </Text>
                     </View>
                     <Text style={styles.cardStatus}>
-                      {item.status === "completed" ? "Done" : "In progress"}
+                      {item.latestStatus === "completed" ? "Done" : "In progress"}
                     </Text>
                   </View>
                 </Card>

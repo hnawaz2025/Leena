@@ -1,9 +1,9 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Speech from "expo-speech";
 import { LinearGradient } from "expo-linear-gradient";
-import { Drama, Languages, Send } from "lucide-react-native";
-import { useState } from "react";
+import { ChevronRight, Drama, Languages, Send } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -13,30 +13,56 @@ import {
   Text,
   View,
 } from "react-native";
+import type { ScenarioSessionSummaryDTO, TurnDTO } from "@leena/shared";
 import { api } from "../api/client";
+import { AttemptDivider } from "../components/AttemptDivider";
 import { BreathingDot } from "../components/BreathingDot";
+import { Card } from "../components/Card";
 import { ChatBubble } from "../components/ChatBubble";
+import { Chip } from "../components/Chip";
+import { FeedbackPanel } from "../components/FeedbackPanel";
 import { HelpMeSayThisPanel } from "../components/HelpMeSayThisPanel";
 import { MicButton } from "../components/MicButton";
+import { ScenarioInfoModal } from "../components/ScenarioInfoModal";
 import { TextField } from "../components/TextField";
 import { useVoiceRecording } from "../hooks/useVoiceRecording";
 import type { RootStackParamList } from "../navigation/types";
 import { useAppStore } from "../store/useAppStore";
 import { colors, gradients, spacing, typography } from "../theme";
+import { relativeDate } from "../utils/relativeDate";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Conversation">;
 
-// Turn-based voice loop: tap the mic to record, tap again to stop -> Whisper
-// transcribes it into the text input for review -> send as normal -> the
-// agent's reply is read aloud with on-device TTS (expo-speech, free, no
-// API cost) so the practice actually feels spoken, not just typed.
+type ThreadItem =
+  | { type: "collapsed"; session: ScenarioSessionSummaryDTO }
+  | { type: "divider"; attemptNumber: number }
+  | { type: "turn"; turn: TurnDTO };
+
+function threadItemKey(item: ThreadItem): string {
+  if (item.type === "collapsed") return `collapsed-${item.session.id}`;
+  if (item.type === "divider") return `divider-${item.attemptNumber}`;
+  return `turn-${item.turn.id}`;
+}
+
+// Scenario-scoped, not session-scoped: "Practice this again" creates a new
+// Session per attempt, and this screen stitches every attempt for the
+// scenario into one continuous thread (divider between attempts, older
+// attempts collapsed) rather than navigating to a fresh screen each time.
+// Turn-based voice loop within the live attempt: tap the mic to record, tap
+// again to stop -> Whisper transcribes it into the text input for review ->
+// send as normal -> the agent's reply is read aloud with on-device TTS.
 export function ConversationScreen({ route, navigation }: Props) {
-  const { sessionId, targetLanguage, scenarioId } = route.params;
+  const { scenarioId } = route.params;
+  const queryClient = useQueryClient();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [startingAgain, setStartingAgain] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [helpPanelOpen, setHelpPanelOpen] = useState(false);
+  const [tab, setTab] = useState<"chat" | "feedback">("chat");
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [expandedTurnsBySessionId, setExpandedTurnsBySessionId] = useState<Record<string, TurnDTO[]>>({});
   const voice = useVoiceRecording();
   const nativeLanguage = useAppStore((s) => s.nativeLanguage);
 
@@ -45,10 +71,37 @@ export function ConversationScreen({ route, navigation }: Props) {
     queryFn: () => api.getScenario(scenarioId),
   });
 
-  const { data: turns, refetch } = useQuery({
-    queryKey: ["turns", sessionId],
-    queryFn: () => api.listTurns(sessionId),
+  const { data: sessions } = useQuery({
+    queryKey: ["scenario-sessions", scenarioId],
+    queryFn: () => api.listScenarioSessions(scenarioId),
   });
+
+  // Defensive only -- ScenarioSetupScreen always creates the first session
+  // immediately after creating the scenario, so this shouldn't normally fire.
+  useEffect(() => {
+    if (sessions && sessions.length === 0) {
+      api.createSession(scenarioId).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["scenario-sessions", scenarioId] });
+      });
+    }
+  }, [sessions, scenarioId, queryClient]);
+
+  const currentSession = sessions && sessions.length > 0 ? sessions[sessions.length - 1] : undefined;
+  const pastSessions = sessions && sessions.length > 1 ? sessions.slice(0, -1) : [];
+  const completedSessions = sessions?.filter((s) => s.status === "completed") ?? [];
+  const latestCompletedSession = completedSessions[completedSessions.length - 1];
+
+  const { data: currentTurns, refetch: refetchCurrentTurns } = useQuery({
+    queryKey: ["turns", currentSession?.id],
+    queryFn: () => api.listTurns(currentSession!.id),
+    enabled: !!currentSession,
+  });
+
+  async function handleExpand(session: ScenarioSessionSummaryDTO) {
+    if (expandedTurnsBySessionId[session.id]) return;
+    const turns = await api.listTurns(session.id);
+    setExpandedTurnsBySessionId((prev) => ({ ...prev, [session.id]: turns }));
+  }
 
   async function handleMicPress() {
     setError(null);
@@ -61,14 +114,14 @@ export function ConversationScreen({ route, navigation }: Props) {
   }
 
   async function handleSend() {
-    if (!input.trim()) return;
+    if (!input.trim() || !currentSession || !scenario) return;
     setSending(true);
     setError(null);
     const text = input.trim();
     setInput("");
     try {
-      await api.sendTurn(sessionId, text, targetLanguage);
-      const { data: updatedTurns } = await refetch();
+      await api.sendTurn(currentSession.id, text, scenario.language);
+      const { data: updatedTurns } = await refetchCurrentTurns();
       const lastTurn = updatedTurns?.[updatedTurns.length - 1];
       if (lastTurn?.speaker === "agent") {
         Speech.speak(lastTurn.text, { language: "en-US" });
@@ -81,19 +134,53 @@ export function ConversationScreen({ route, navigation }: Props) {
   }
 
   async function handleEnd() {
+    if (!currentSession) return;
     Speech.stop();
     setEnding(true);
     setError(null);
     try {
-      await api.endSession(sessionId);
-      navigation.replace("Feedback", { sessionId, scenarioId });
+      await api.endSession(currentSession.id);
+      await queryClient.invalidateQueries({ queryKey: ["scenario-sessions", scenarioId] });
+      setTab("feedback");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
       setEnding(false);
     }
   }
 
+  async function handlePracticeAgain() {
+    setStartingAgain(true);
+    try {
+      await api.createSession(scenarioId);
+      await queryClient.invalidateQueries({ queryKey: ["scenario-sessions", scenarioId] });
+      setTab("chat");
+    } finally {
+      setStartingAgain(false);
+    }
+  }
+
   const isRecording = voice.state === "recording";
+  const isCurrentActive = currentSession?.status === "active";
+
+  const threadItems: ThreadItem[] = [
+    ...pastSessions.flatMap((session): ThreadItem[] => {
+      const expanded = expandedTurnsBySessionId[session.id];
+      if (!expanded) return [{ type: "collapsed", session }];
+      return [
+        { type: "divider", attemptNumber: session.attemptNumber },
+        ...expanded.map((turn): ThreadItem => ({ type: "turn", turn })),
+      ];
+    }),
+    ...(currentSession
+      ? [
+          ...(sessions && sessions.length > 1
+            ? [{ type: "divider" as const, attemptNumber: currentSession.attemptNumber }]
+            : []),
+          ...(currentTurns ?? []).map((turn): ThreadItem => ({ type: "turn", turn })),
+        ]
+      : []),
+  ];
 
   return (
     <KeyboardAvoidingView
@@ -101,84 +188,146 @@ export function ConversationScreen({ route, navigation }: Props) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {scenario ? (
-        <View style={styles.personaHeader}>
-          <LinearGradient
-            colors={gradients.secondary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.personaAvatar}
-          >
-            <Drama size={18} color={colors.white} strokeWidth={2} />
-          </LinearGradient>
-          <View style={styles.personaTextGroup}>
-            <Text style={styles.personaTitle} numberOfLines={1}>
-              {scenario.title}
-            </Text>
-            <Text style={styles.personaSubtitle} numberOfLines={1}>
-              {scenario.personaDescription}
-            </Text>
+        <Pressable onPress={() => setInfoOpen(true)}>
+          <View style={styles.personaHeader}>
+            <LinearGradient
+              colors={gradients.secondary}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.personaAvatar}
+            >
+              <Drama size={18} color={colors.white} strokeWidth={2} />
+            </LinearGradient>
+            <View style={styles.personaTextGroup}>
+              <Text style={styles.personaTitle} numberOfLines={1}>
+                {scenario.title}
+              </Text>
+              <Text style={styles.personaSubtitle} numberOfLines={1}>
+                {scenario.personaDescription}
+              </Text>
+            </View>
           </View>
+        </Pressable>
+      ) : null}
+
+      {scenario ? (
+        <ScenarioInfoModal
+          visible={infoOpen}
+          scenario={scenario}
+          onClose={() => setInfoOpen(false)}
+        />
+      ) : null}
+
+      {latestCompletedSession ? (
+        <View style={styles.tabRow}>
+          <Chip label="Chat" selected={tab === "chat"} onPress={() => setTab("chat")} />
+          <Chip label="Feedback" selected={tab === "feedback"} onPress={() => setTab("feedback")} />
         </View>
       ) : null}
 
-      <FlatList
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        data={turns ?? []}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ChatBubble text={item.text} speaker={item.speaker} />}
-        ListEmptyComponent={
-          <Text style={styles.empty}>Say something to start the conversation.</Text>
-        }
-        ListFooterComponent={sending ? <BreathingDot /> : null}
-      />
-
-      {isRecording ? <Text style={styles.listeningNote}>Listening…</Text> : null}
-      {(error || voice.error) ? <Text style={styles.error}>{error || voice.error}</Text> : null}
-
-      {helpPanelOpen ? (
-        <HelpMeSayThisPanel
-          sessionId={sessionId}
-          nativeLanguage={nativeLanguage}
-          onUse={(englishText) => {
-            setInput((prev) => (prev ? `${prev} ${englishText}` : englishText));
-            setHelpPanelOpen(false);
-          }}
-          onClose={() => setHelpPanelOpen(false)}
+      {tab === "feedback" && latestCompletedSession ? (
+        <FeedbackPanel
+          sessionId={latestCompletedSession.id}
+          onPracticeAgain={handlePracticeAgain}
+          onBackHome={() => navigation.popToTop()}
+          practiceAgainLoading={startingAgain}
         />
       ) : (
-        <Pressable style={styles.helpButton} onPress={() => setHelpPanelOpen(true)}>
-          <Languages size={14} color={colors.primary} strokeWidth={2.5} />
-          <Text style={styles.helpButtonText}>Stuck? Help me say this</Text>
-        </Pressable>
+        <>
+          <FlatList
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            data={threadItems}
+            keyExtractor={threadItemKey}
+            renderItem={({ item }) => {
+              if (item.type === "collapsed") {
+                return (
+                  <Pressable onPress={() => handleExpand(item.session)}>
+                    <Card style={styles.collapsedCard}>
+                      <View style={styles.collapsedRow}>
+                        <Text style={styles.collapsedText}>
+                          Practice {item.session.attemptNumber} · {relativeDate(item.session.startedAt)} ·{" "}
+                          {item.session.turnCount} message{item.session.turnCount === 1 ? "" : "s"}
+                        </Text>
+                        <ChevronRight size={14} color={colors.textMuted} strokeWidth={2} />
+                      </View>
+                    </Card>
+                  </Pressable>
+                );
+              }
+              if (item.type === "divider") {
+                return <AttemptDivider attemptNumber={item.attemptNumber} />;
+              }
+              return <ChatBubble text={item.turn.text} speaker={item.turn.speaker} />;
+            }}
+            ListEmptyComponent={
+              <Text style={styles.empty}>Say something to start the conversation.</Text>
+            }
+            ListFooterComponent={sending ? <BreathingDot /> : null}
+          />
+
+          {isRecording ? <Text style={styles.listeningNote}>Listening…</Text> : null}
+          {(error || voice.error) ? <Text style={styles.error}>{error || voice.error}</Text> : null}
+
+          {isCurrentActive ? (
+            <>
+              {helpPanelOpen ? (
+                <HelpMeSayThisPanel
+                  sessionId={currentSession!.id}
+                  nativeLanguage={nativeLanguage}
+                  onUse={(englishText) => {
+                    setInput((prev) => (prev ? `${prev} ${englishText}` : englishText));
+                    setHelpPanelOpen(false);
+                  }}
+                  onClose={() => setHelpPanelOpen(false)}
+                />
+              ) : (
+                <Pressable style={styles.helpButton} onPress={() => setHelpPanelOpen(true)}>
+                  <Languages size={14} color={colors.primary} strokeWidth={2.5} />
+                  <Text style={styles.helpButtonText}>Stuck? Help me say this</Text>
+                </Pressable>
+              )}
+
+              <View style={styles.inputRow}>
+                <MicButton state={voice.state} onPress={handleMicPress} disabled={sending} />
+                <TextField
+                  style={styles.input}
+                  placeholder={`Type or speak in ${scenario?.language ?? "English"}…`}
+                  value={input}
+                  onChangeText={setInput}
+                  editable={!sending}
+                />
+                <Pressable onPress={handleSend} disabled={sending || !input.trim()}>
+                  <LinearGradient
+                    colors={gradients.primary}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[styles.sendButton, (sending || !input.trim()) && styles.sendButtonDisabled]}
+                  >
+                    <Send size={18} color={colors.white} strokeWidth={2.5} />
+                  </LinearGradient>
+                </Pressable>
+              </View>
+
+              <Pressable style={styles.endButton} onPress={handleEnd} disabled={ending}>
+                <Text style={styles.endButtonText}>
+                  {ending ? "Wrapping up…" : "End conversation & get feedback"}
+                </Text>
+              </Pressable>
+            </>
+          ) : currentSession ? (
+            <Pressable
+              style={styles.practiceAgainButton}
+              onPress={handlePracticeAgain}
+              disabled={startingAgain}
+            >
+              <Text style={styles.practiceAgainText}>
+                {startingAgain ? "Starting…" : "Practice this again"}
+              </Text>
+            </Pressable>
+          ) : null}
+        </>
       )}
-
-      <View style={styles.inputRow}>
-        <MicButton state={voice.state} onPress={handleMicPress} disabled={sending} />
-        <TextField
-          style={styles.input}
-          placeholder={`Type or speak in ${targetLanguage}…`}
-          value={input}
-          onChangeText={setInput}
-          editable={!sending}
-        />
-        <Pressable onPress={handleSend} disabled={sending || !input.trim()}>
-          <LinearGradient
-            colors={gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.sendButton, (sending || !input.trim()) && styles.sendButtonDisabled]}
-          >
-            <Send size={18} color={colors.white} strokeWidth={2.5} />
-          </LinearGradient>
-        </Pressable>
-      </View>
-
-      <Pressable style={styles.endButton} onPress={handleEnd} disabled={ending}>
-        <Text style={styles.endButtonText}>
-          {ending ? "Wrapping up…" : "End conversation & get feedback"}
-        </Text>
-      </Pressable>
     </KeyboardAvoidingView>
   );
 }
@@ -204,9 +353,21 @@ const styles = StyleSheet.create({
   personaTextGroup: { flex: 1 },
   personaTitle: { ...typography.h2, fontSize: 15 },
   personaSubtitle: { ...typography.caption },
+  tabRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
   list: { flex: 1 },
   listContent: { padding: spacing.lg },
   empty: { ...typography.body, color: colors.textMuted, textAlign: "center", marginTop: spacing.xxxl },
+  collapsedCard: { marginBottom: spacing.sm },
+  collapsedRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  collapsedText: { ...typography.caption, flex: 1 },
   listeningNote: {
     ...typography.caption,
     color: colors.error,
@@ -241,5 +402,13 @@ const styles = StyleSheet.create({
   sendButtonDisabled: { opacity: 0.4 },
   endButton: { paddingVertical: spacing.md, alignItems: "center" },
   endButtonText: { ...typography.caption, color: colors.textSecondary, fontFamily: typography.bodyBold.fontFamily },
+  practiceAgainButton: {
+    paddingVertical: spacing.lg,
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  practiceAgainText: { ...typography.bodyBold, color: colors.primary },
   error: { ...typography.caption, color: colors.error, textAlign: "center", marginTop: spacing.sm },
 });

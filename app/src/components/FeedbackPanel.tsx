@@ -1,21 +1,33 @@
-import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { api } from "../api/client";
-import { BreathingDot } from "../components/BreathingDot";
-import { Button } from "../components/Button";
-import { Card } from "../components/Card";
-import type { RootStackParamList } from "../navigation/types";
 import { useAppStore } from "../store/useAppStore";
 import { colors, fontFamily, radius, spacing, typography } from "../theme";
+import { BreathingDot } from "./BreathingDot";
+import { Button } from "./Button";
+import { Card } from "./Card";
+import { Chip } from "./Chip";
 
-type Props = NativeStackScreenProps<RootStackParamList, "Feedback">;
+interface FeedbackPanelProps {
+  sessionId: string;
+  onPracticeAgain: () => void;
+  onBackHome: () => void;
+  practiceAgainLoading?: boolean;
+}
 
-export function FeedbackScreen({ route, navigation }: Props) {
-  const { sessionId, scenarioId } = route.params;
-  const [startingAgain, setStartingAgain] = useState(false);
-  const targetLanguage = useAppStore((s) => s.targetLanguage);
+// The coaching payoff for one completed attempt -- bilingual toggle, a
+// factual pre-real-conversation recap, struggle areas, vocab. Mounted inside
+// ConversationScreen's "Feedback" tab rather than a standalone route, so
+// ending a session or starting a new attempt never navigates away.
+export function FeedbackPanel({
+  sessionId,
+  onPracticeAgain,
+  onBackHome,
+  practiceAgainLoading = false,
+}: FeedbackPanelProps) {
+  const [lang, setLang] = useState<"english" | "native">("english");
+  const nativeLanguage = useAppStore((s) => s.nativeLanguage);
 
   const { data: feedback, isLoading, error } = useQuery({
     queryKey: ["feedback", sessionId],
@@ -23,16 +35,6 @@ export function FeedbackScreen({ route, navigation }: Props) {
     retry: 3,
     retryDelay: 1500,
   });
-
-  async function handlePracticeAgain() {
-    setStartingAgain(true);
-    try {
-      const session = await api.createSession(scenarioId);
-      navigation.replace("Conversation", { sessionId: session.id, targetLanguage, scenarioId });
-    } finally {
-      setStartingAgain(false);
-    }
-  }
 
   if (isLoading) {
     return (
@@ -51,10 +53,28 @@ export function FeedbackScreen({ route, navigation }: Props) {
     );
   }
 
+  const summary = lang === "english" ? feedback.summary : feedback.summaryNative;
+  const struggleAreas = lang === "english" ? feedback.struggleAreas : feedback.struggleAreasNative;
+  const conversationSummary =
+    lang === "english" ? feedback.conversationSummary : feedback.conversationSummaryNative;
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Nice work — here's what to sharpen</Text>
-      <Text style={styles.summary}>{feedback.summary}</Text>
+
+      {nativeLanguage ? (
+        <View style={styles.langToggleRow}>
+          <Chip label="English" selected={lang === "english"} onPress={() => setLang("english")} />
+          <Chip label={nativeLanguage} selected={lang === "native"} onPress={() => setLang("native")} />
+        </View>
+      ) : null}
+
+      <Card accentColor={colors.secondary} style={styles.recapCard}>
+        <Text style={styles.recapLabel}>Before your real conversation</Text>
+        <Text style={styles.recapText}>{conversationSummary}</Text>
+      </Card>
+
+      <Text style={styles.summary}>{summary}</Text>
 
       <View style={styles.statStrip}>
         <Text style={styles.statText}>
@@ -68,7 +88,7 @@ export function FeedbackScreen({ route, navigation }: Props) {
       </View>
 
       <Text style={styles.sectionTitle}>Where you struggled</Text>
-      {feedback.struggleAreas.map((area, i) => (
+      {struggleAreas.map((area, i) => (
         <Card key={i} accentColor={colors.warning} style={styles.struggleCard}>
           <Text style={styles.struggleText}>{area}</Text>
         </Card>
@@ -84,16 +104,11 @@ export function FeedbackScreen({ route, navigation }: Props) {
 
       <Button
         label="Practice this again"
-        onPress={handlePracticeAgain}
-        loading={startingAgain}
+        onPress={onPracticeAgain}
+        loading={practiceAgainLoading}
         style={styles.primaryButton}
       />
-      <Button
-        label="Back to home"
-        variant="secondary"
-        onPress={() => navigation.popToTop()}
-        style={styles.secondaryButton}
-      />
+      <Button label="Back to home" variant="secondary" onPress={onBackHome} style={styles.secondaryButton} />
     </ScrollView>
   );
 }
@@ -104,6 +119,15 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl, backgroundColor: colors.background },
   loadingText: { ...typography.body, color: colors.textSecondary, textAlign: "center", marginTop: spacing.lg },
   title: { ...typography.h1, marginBottom: spacing.md },
+  langToggleRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.lg },
+  recapCard: { marginBottom: spacing.lg },
+  recapLabel: {
+    ...typography.caption,
+    fontFamily: typography.bodyBold.fontFamily,
+    color: colors.secondary,
+    marginBottom: spacing.xs,
+  },
+  recapText: { ...typography.body },
   summary: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg },
   statStrip: { flexDirection: "row", alignItems: "center", marginBottom: spacing.xl, gap: spacing.sm },
   statText: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.primaryDark },

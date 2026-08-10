@@ -7,10 +7,18 @@ export type Speaker = "user" | "agent";
 export interface ScenarioDTO {
   id: string;
   title: string;
+  situationType: string;
   personaDescription: string;
   contextSummary: string;
   language: Language;
   documentId: string | null;
+  createdAt: string;
+}
+
+export interface DocumentDTO {
+  id: string;
+  type: DocumentType;
+  extractedText: string;
   createdAt: string;
 }
 
@@ -37,8 +45,12 @@ export interface FeedbackReportDTO {
   id: string;
   sessionId: string;
   summary: string;
+  summaryNative: string;
   struggleAreas: string[];
+  struggleAreasNative: string[];
   vocabularySuggestions: { term: string; note: string }[];
+  conversationSummary: string;
+  conversationSummaryNative: string;
   createdAt: string;
 }
 
@@ -67,4 +79,19 @@ export interface ChatTurnRequest {
 export interface HelpSuggestionDTO {
   id: string;
   suggestedText: string;
+}
+
+export interface ScenarioSessionSummaryDTO {
+  id: string;
+  attemptNumber: number;
+  status: "active" | "completed";
+  startedAt: string;
+  endedAt: string | null;
+  turnCount: number;
+}
+
+export interface ScenarioListItemDTO extends ScenarioDTO {
+  latestStatus: "active" | "completed";
+  latestStartedAt: string;
+  attemptCount: number;
 }

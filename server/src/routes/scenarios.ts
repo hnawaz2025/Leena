@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { ScenarioDTO } from "@leena/shared";
+import type { ScenarioDTO, ScenarioListItemDTO, ScenarioSessionSummaryDTO } from "@leena/shared";
 import { getLLMProvider } from "../ai";
 import { prisma } from "../db";
 import { asyncHandler } from "../middleware/asyncHandler";
@@ -16,6 +16,7 @@ const createSchema = z.object({
 function toDTO(scenario: {
   id: string;
   title: string;
+  situationType: string;
   personaDescription: string;
   contextSummary: string;
   language: string;
@@ -25,6 +26,7 @@ function toDTO(scenario: {
   return {
     id: scenario.id,
     title: scenario.title,
+    situationType: scenario.situationType,
     personaDescription: scenario.personaDescription,
     contextSummary: scenario.contextSummary,
     language: scenario.language,
@@ -65,6 +67,7 @@ scenariosRouter.post(
         userId: user.id,
         documentId: parsed.data.documentId ?? null,
         title: generated.title,
+        situationType: parsed.data.situationType,
         personaDescription: generated.personaDescription,
         contextSummary: `${generated.contextSummary}\n\nOpening line: ${generated.openingLine}\nKey vocabulary: ${generated.keyVocabulary.join(", ")}`,
         language: user.targetLanguage,
@@ -72,6 +75,37 @@ scenariosRouter.post(
     });
 
     res.status(201).json(toDTO(scenario));
+  })
+);
+
+// Home screen is scenario-scoped, not session-scoped -- "Practice this again"
+// creates a new Session per attempt, so listing raw Sessions would show one
+// card per attempt. This lists one row per Scenario, with its latest
+// session's status and a total attempt count, so repeated practice never
+// looks like duplicate history.
+scenariosRouter.get(
+  "/",
+  requireUser,
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const scenarios = await prisma.scenario.findMany({
+      where: { userId: req.userId! },
+      include: { sessions: { orderBy: { startedAt: "desc" } } },
+    });
+
+    const dtos: ScenarioListItemDTO[] = scenarios
+      .filter((s) => s.sessions.length > 0)
+      .map((s) => {
+        const latest = s.sessions[0];
+        return {
+          ...toDTO(s),
+          latestStatus: latest.status as "active" | "completed",
+          latestStartedAt: latest.startedAt.toISOString(),
+          attemptCount: s.sessions.length,
+        };
+      })
+      .sort((a, b) => new Date(b.latestStartedAt).getTime() - new Date(a.latestStartedAt).getTime());
+
+    res.json(dtos);
   })
 );
 
@@ -84,5 +118,33 @@ scenariosRouter.get(
     });
     if (!scenario) return res.status(404).json({ error: "Scenario not found" });
     res.json(toDTO(scenario));
+  })
+);
+
+scenariosRouter.get(
+  "/:id/sessions",
+  requireUser,
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const scenario = await prisma.scenario.findFirst({
+      where: { id: req.params.id, userId: req.userId! },
+    });
+    if (!scenario) return res.status(404).json({ error: "Scenario not found" });
+
+    const sessions = await prisma.session.findMany({
+      where: { scenarioId: scenario.id },
+      orderBy: { startedAt: "asc" },
+      include: { _count: { select: { turns: true } } },
+    });
+
+    const dtos: ScenarioSessionSummaryDTO[] = sessions.map((s, i) => ({
+      id: s.id,
+      attemptNumber: i + 1,
+      status: s.status as "active" | "completed",
+      startedAt: s.startedAt.toISOString(),
+      endedAt: s.endedAt ? s.endedAt.toISOString() : null,
+      turnCount: s._count.turns,
+    }));
+
+    res.json(dtos);
   })
 );

@@ -50,7 +50,7 @@ You must invent a persona for the OTHER party in the conversation: the specific 
 needs to talk to (e.g. the landlord, the doctor, the DMV clerk, the USCIS officer) -- never someone
 in the same role as the user (never another tenant, another patient, another applicant).
 
-Return ONLY a JSON object with keys: title, personaDescription (who the AI will roleplay as -- the other party, e.g. "a landlord named Mr. Chen" or "a doctor named Dr. Patel", never a role matching the user's own), contextSummary (2-3 sentences of situational context), openingLine (what the persona says first, in ${input.targetLanguage}), keyVocabulary (array of 5-8 useful words/phrases in ${input.targetLanguage}).
+Return ONLY a JSON object with keys: title, personaDescription (who the AI will roleplay as -- the other party, e.g. "a landlord named Mr. Chen" or "a doctor named Dr. Patel", never a role matching the user's own), contextSummary (2-3 sentences of situational context, referring to the person practicing as "the user" -- never as "the immigrant"), openingLine (what the persona says first, in ${input.targetLanguage}), keyVocabulary (array of 5-8 useful words/phrases in ${input.targetLanguage}).
 ${correctionNote ? `\n${correctionNote}` : ""}`;
 
     return callForJson(generatedScenarioSchema, async (correctionNote) => {
@@ -101,17 +101,40 @@ Speak only in ${input.targetLanguage}. Stay in character. Keep responses short a
 """${transcriptText}"""
 
 Analyze the USER's turns only. Return ONLY a JSON object with keys:
-summary (2-3 sentence coaching summary), struggleAreas (array of short strings describing specific difficulties, e.g. "hesitated on past tense verbs"), vocabularySuggestions (array of objects with "term" and "note" fields, useful words/phrases the user should learn, with the note explaining when to use it, written in ${input.nativeLanguage} for clarity).
+summary (2-3 sentence coaching summary of how they did, written in ${input.targetLanguage}),
+summaryNative (the same coaching summary, faithfully written in ${input.nativeLanguage} -- same meaning, not a re-analysis),
+struggleAreas (array of short strings describing specific difficulties, e.g. "hesitated on past tense verbs", written in ${input.targetLanguage}),
+struggleAreasNative (the SAME struggle areas, same order, same count, each faithfully written in ${input.nativeLanguage}),
+vocabularySuggestions (array of objects with "term" -- the actual ${input.targetLanguage} word or phrase to learn, written in ${input.targetLanguage}, never in ${input.nativeLanguage} -- and "note" explaining when to use it, written in ${input.nativeLanguage} for clarity),
+conversationSummary (2-4 sentences factually recapping what was actually discussed/decided in the conversation -- not coaching, just what happened, so the user can quickly reread it right before the real conversation if they don't get to rehearse again; written in ${input.targetLanguage}),
+conversationSummaryNative (the same factual recap, faithfully written in ${input.nativeLanguage}).
 ${correctionNote ? `\n${correctionNote}` : ""}`;
 
-    return callForJson(analyzeSessionResultSchema, async (correctionNote) => {
-      const response = await this.client.messages.create({
-        model: MODEL,
-        max_tokens: 2048,
-        messages: [{ role: "user", content: buildPrompt(correctionNote) }],
-      });
-      return response.content.find((b) => b.type === "text")?.text ?? "";
-    });
+    return callForJson(
+      analyzeSessionResultSchema,
+      async (correctionNote) => {
+        const response = await this.client.messages.create({
+          model: MODEL,
+          max_tokens: 2048,
+          messages: [{ role: "user", content: buildPrompt(correctionNote) }],
+        });
+        return response.content.find((b) => b.type === "text")?.text ?? "";
+      },
+      (parsed) => {
+        assertNoUnexpectedScript(parsed.summary, input.targetLanguage);
+        assertNoUnexpectedScript(parsed.summaryNative, input.nativeLanguage);
+        assertNoUnexpectedScript(parsed.conversationSummary, input.targetLanguage);
+        assertNoUnexpectedScript(parsed.conversationSummaryNative, input.nativeLanguage);
+        parsed.struggleAreas.forEach((s) => assertNoUnexpectedScript(s, input.targetLanguage));
+        parsed.struggleAreasNative.forEach((s) => assertNoUnexpectedScript(s, input.nativeLanguage));
+        parsed.vocabularySuggestions.forEach((v) => assertNoUnexpectedScript(v.note, input.nativeLanguage));
+        if (parsed.struggleAreas.length !== parsed.struggleAreasNative.length) {
+          throw new Error(
+            `struggleAreas (${parsed.struggleAreas.length}) and struggleAreasNative (${parsed.struggleAreasNative.length}) must be the same length`
+          );
+        }
+      }
+    );
   }
 
   async explainDocument(input: ExplainDocumentInput): Promise<DocumentExplanation> {
@@ -124,7 +147,7 @@ Document text:
 """${truncatedText}"""
 
 Return ONLY a JSON object with keys:
-summary (a short plain-language explanation of what this document says and what it means for the reader, written in ${input.nativeLanguage}),
+summary (a short plain-language explanation of what this document says and what it means for the reader, written in ${input.nativeLanguage}, referring to the reader as "you" or "the user" -- never as "the immigrant"),
 keyTerms (array of objects with "term" (the confusing word/phrase as it appears in the document) and "definition" (a simple explanation of it, written in ${input.nativeLanguage})),
 actionItems (array of short strings describing anything the reader needs to actually do, e.g. a deadline or required response, written in ${input.nativeLanguage}; empty array if there is nothing actionable).
 ${correctionNote ? `\n${correctionNote}` : ""}`;

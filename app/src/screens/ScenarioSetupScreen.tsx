@@ -21,7 +21,6 @@ export function ScenarioSetupScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nativeLanguage = useAppStore((s) => s.nativeLanguage);
-  const targetLanguage = useAppStore((s) => s.targetLanguage);
 
   const nativeVoice = useVoiceRecording();
   const englishVoice = useVoiceRecording();
@@ -65,8 +64,8 @@ export function ScenarioSetupScreen({ route, navigation }: Props) {
         .join("\n");
 
       const scenario = await api.createScenario(situationType, documentId);
-      const session = await api.createSession(scenario.id);
-      navigation.replace("Conversation", { sessionId: session.id, targetLanguage, scenarioId: scenario.id });
+      await api.createSession(scenario.id);
+      navigation.replace("Conversation", { scenarioId: scenario.id });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {

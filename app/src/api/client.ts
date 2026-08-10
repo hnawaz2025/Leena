@@ -66,8 +66,6 @@ export const api = {
       body: JSON.stringify({ situationType, documentId }),
     }),
 
-  listSessions: () => request<import("@leena/shared").SessionDTO[]>("/sessions"),
-
   getScenario: (scenarioId: string) =>
     request<import("@leena/shared").ScenarioDTO>(`/scenarios/${scenarioId}`),
 
@@ -109,4 +107,12 @@ export const api = {
 
   markHelpPhraseUsed: (sessionId: string, eventId: string) =>
     request<void>(`/sessions/${sessionId}/help/${eventId}/use`, { method: "POST" }),
+
+  listScenarios: () => request<import("@leena/shared").ScenarioListItemDTO[]>("/scenarios"),
+
+  listScenarioSessions: (scenarioId: string) =>
+    request<import("@leena/shared").ScenarioSessionSummaryDTO[]>(`/scenarios/${scenarioId}/sessions`),
+
+  getDocument: (documentId: string) =>
+    request<import("@leena/shared").DocumentDTO>(`/documents/${documentId}`),
 };

@@ -175,14 +175,22 @@ sessionsRouter.post(
       where: { sessionId: session.id },
       update: {
         summary: analysis.summary,
+        summaryNative: analysis.summaryNative,
         struggleAreas: analysis.struggleAreas,
+        struggleAreasNative: analysis.struggleAreasNative,
         vocabularySuggestions: analysis.vocabularySuggestions,
+        conversationSummary: analysis.conversationSummary,
+        conversationSummaryNative: analysis.conversationSummaryNative,
       },
       create: {
         sessionId: session.id,
         summary: analysis.summary,
+        summaryNative: analysis.summaryNative,
         struggleAreas: analysis.struggleAreas,
+        struggleAreasNative: analysis.struggleAreasNative,
         vocabularySuggestions: analysis.vocabularySuggestions,
+        conversationSummary: analysis.conversationSummary,
+        conversationSummaryNative: analysis.conversationSummaryNative,
       },
     });
 
@@ -206,8 +214,12 @@ sessionsRouter.get(
       id: feedback.id,
       sessionId: feedback.sessionId,
       summary: feedback.summary,
+      summaryNative: feedback.summaryNative,
       struggleAreas: feedback.struggleAreas as string[],
+      struggleAreasNative: feedback.struggleAreasNative as string[],
       vocabularySuggestions: feedback.vocabularySuggestions as { term: string; note: string }[],
+      conversationSummary: feedback.conversationSummary,
+      conversationSummaryNative: feedback.conversationSummaryNative,
       createdAt: feedback.createdAt.toISOString(),
     };
     res.json(dto);

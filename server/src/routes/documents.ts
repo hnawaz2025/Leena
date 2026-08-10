@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { DocumentExplanationDTO } from "@leena/shared";
+import type { DocumentDTO, DocumentExplanationDTO } from "@leena/shared";
 import { getLLMProvider } from "../ai";
 import { prisma } from "../db";
 import { asyncHandler } from "../middleware/asyncHandler";
@@ -34,6 +34,25 @@ documentsRouter.post(
     });
 
     res.status(201).json({ id: document.id, type: document.type });
+  })
+);
+
+documentsRouter.get(
+  "/:id",
+  requireUser,
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const document = await prisma.document.findFirst({
+      where: { id: req.params.id, userId: req.userId! },
+    });
+    if (!document) return res.status(404).json({ error: "Document not found" });
+
+    const dto: DocumentDTO = {
+      id: document.id,
+      type: document.type as DocumentDTO["type"],
+      extractedText: document.extractedText,
+      createdAt: document.createdAt.toISOString(),
+    };
+    res.json(dto);
   })
 );
 

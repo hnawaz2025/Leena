@@ -15,17 +15,27 @@ function extractJsonBlock(raw: string): string {
 }
 
 const CJK_RANGE = /[一-鿿぀-ヿ가-힯]/;
+// Seen once for real: a stray Cyrillic word ("nyaetsya"-ish) inside otherwise
+// correct Spanish output. None of this app's supported languages (Spanish,
+// Mandarin, Hindi, English) use Cyrillic, so this check is unconditional.
+const CYRILLIC_RANGE = /[Ѐ-ӿ]/;
 
 // Small open-weight models (the free Featherless path) have shown a real
-// failure mode: stray Chinese/Japanese/Korean characters leaking into output
+// failure mode: stray characters from an unrelated script leaking into output
 // meant to be in a different language (seen first in explainDocument's
-// Spanish output). This is a cheap, targeted check for exactly that -- not a
-// general translation-quality check.
+// Spanish output, then again as Cyrillic in a Spanish struggle area). This is
+// a cheap, targeted check for exactly that -- not a general
+// translation-quality check.
 export function assertNoUnexpectedScript(text: string, expectedLanguage: string): void {
   const isCjkExpected = /chinese|mandarin|japanese|korean/i.test(expectedLanguage);
   if (!isCjkExpected && CJK_RANGE.test(text)) {
     throw new Error(
       `Unexpected CJK characters in output meant to be ${expectedLanguage}: ${text}`
+    );
+  }
+  if (CYRILLIC_RANGE.test(text)) {
+    throw new Error(
+      `Unexpected Cyrillic characters in output meant to be ${expectedLanguage}: ${text}`
     );
   }
 }

@@ -3,7 +3,6 @@ export type RootStackParamList = {
   Home: undefined;
   DocumentUpload: undefined;
   ScenarioSetup: { documentId?: string } | undefined;
-  Conversation: { sessionId: string; targetLanguage: string; scenarioId: string };
-  Feedback: { sessionId: string; scenarioId: string };
+  Conversation: { scenarioId: string };
   DocumentExplanation: { documentId: string; documentType: string };
 };
