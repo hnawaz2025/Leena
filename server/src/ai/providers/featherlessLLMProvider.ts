@@ -205,26 +205,45 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
   }
 
   async suggestPhrase(input: SuggestPhraseInput): Promise<SuggestPhraseResult> {
-    const recentHistory = input.history.slice(-MAX_HISTORY_TURNS_FOR_HELP);
+    const recentHistory = (input.history ?? []).slice(-MAX_HISTORY_TURNS_FOR_HELP);
     const historyText = recentHistory.map((t) => `${t.speaker.toUpperCase()}: ${t.text}`).join("\n");
+    const inRoleplay = !!input.personaDescription;
 
-    const buildPrompt = (correctionNote?: string) => `You are a translation coach helping a language learner during a live roleplay
+    const situation = inRoleplay
+      ? `You are a translation coach helping a language learner during a live roleplay
 practice conversation. The learner is talking to: ${input.personaDescription}.
 Context: ${input.contextSummary}
 Recent conversation so far:
-${historyText || "(nothing said yet)"}
+${historyText || "(nothing said yet)"}`
+      : `You are a translation coach helping a language learner who is out in the real world
+right now -- at a counter, in a classroom, on a phone call -- and needs to say something in
+${input.targetLanguage} immediately. There is no roleplay and no conversation history.`;
+
+    const guidance = inRoleplay
+      ? `Give them natural, conversational ${input.targetLanguage} phrasing they could say next in THIS
+conversation, appropriate for speaking to ${input.personaDescription} in this context. Match the
+register and situation -- do not produce a textbook translation disconnected from the
+conversation.`
+      : `Give them natural, conversational ${input.targetLanguage} phrasing for what they want to say.
+Assume a polite, everyday register that works with a stranger such as a clerk, teacher or
+receptionist -- do not produce a stiff textbook translation.`;
+
+    const knownPhrasesNote = input.knownPhrases?.length
+      ? `; if this request means essentially the same thing as one of these phrases the learner has already looked up, reuse that string EXACTLY rather than inventing a new wording: ${input.knownPhrases.map((p) => `"${p}"`).join(", ")}`
+      : "";
+
+    const buildPrompt = (correctionNote?: string) => `${situation}
 
 The learner is stuck on how to say something in ${input.targetLanguage}. They said, in their
 native language (${input.nativeLanguage}):
 """${input.nativeLanguageText}"""
 
-Give them natural, conversational ${input.targetLanguage} phrasing they could say next in THIS
-conversation, appropriate for speaking to ${input.personaDescription} in this context. Match the
-register and situation -- do not produce a textbook translation disconnected from the
-conversation. Keep it to 1-2 short sentences, the way a real person would actually say it out loud.
+${guidance} Keep it to 1-2 short sentences, the way a real person would actually say it out loud.
 
-Return ONLY a JSON object with key: suggestedText (the phrase in ${input.targetLanguage}, written
-naturally, no notes/explanations, no ${input.nativeLanguage} text mixed in).
+Return ONLY a JSON object with keys:
+suggestedText (the phrase in ${input.targetLanguage}, written naturally, no notes/explanations, no ${input.nativeLanguage} text mixed in),
+keyPhrase (the same phrase reduced to a short canonical form for grouping repeats: lowercase, no trailing punctuation, e.g. "could you repeat that"${knownPhrasesNote}),
+category (exactly one of: VOCABULARY = didn't know a specific word or phrase; GRAMMAR = tense or sentence structure; CONFIDENCE = hesitation or not knowing how to start; COMPREHENSION = didn't understand the other person; FORMALITY = unsure how polite or direct to be; DOMAIN_KNOWLEDGE = didn't understand a concept or process, not just a word).
 ${correctionNote ? `\n${correctionNote}` : ""}`;
 
     return callForJson(
@@ -232,7 +251,7 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
       async (correctionNote) => {
         const response = await this.client.chat.completions.create({
           model: this.model,
-          max_tokens: 300,
+          max_tokens: 400,
           messages: [{ role: "user", content: buildPrompt(correctionNote) }],
         });
         return response.choices[0]?.message?.content ?? "";

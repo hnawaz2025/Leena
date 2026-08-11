@@ -41,7 +41,20 @@ export const documentExplanationSchema = z.object({
 });
 export type DocumentExplanation = z.infer<typeof documentExplanationSchema>;
 
+// Mirrors the StruggleCategory enum in schema.prisma -- keep the two in sync.
+export const struggleCategorySchema = z.enum([
+  "VOCABULARY",
+  "GRAMMAR",
+  "CONFIDENCE",
+  "COMPREHENSION",
+  "FORMALITY",
+  "DOMAIN_KNOWLEDGE",
+]);
+export type StruggleCategory = z.infer<typeof struggleCategorySchema>;
+
 export const suggestedPhraseSchema = z.object({
   suggestedText: z.string().min(1),
+  keyPhrase: z.string().min(1),
+  category: struggleCategorySchema,
 });
 export type SuggestedPhrase = z.infer<typeof suggestedPhraseSchema>;

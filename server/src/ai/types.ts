@@ -1,5 +1,15 @@
-import type { AnalyzeSessionResult, DocumentExplanation, GeneratedScenario } from "./schemas";
-export type { GeneratedScenario, AnalyzeSessionResult, DocumentExplanation } from "./schemas";
+import type {
+  AnalyzeSessionResult,
+  DocumentExplanation,
+  GeneratedScenario,
+  StruggleCategory,
+} from "./schemas";
+export type {
+  GeneratedScenario,
+  AnalyzeSessionResult,
+  DocumentExplanation,
+  StruggleCategory,
+} from "./schemas";
 
 export interface GenerateScenarioInput {
   situationType: string;
@@ -41,17 +51,27 @@ export interface ExtractDocumentTextResult {
   text: string;
 }
 
+// personaDescription/contextSummary/history are absent for a standalone
+// quick lookup (someone stuck in real life, not mid-rehearsal) -- the
+// providers branch on that rather than inventing a fake roleplay context.
 export interface SuggestPhraseInput {
-  personaDescription: string;
-  contextSummary: string;
+  personaDescription?: string;
+  contextSummary?: string;
   targetLanguage: string;
-  history: { speaker: "user" | "agent"; text: string }[];
+  history?: { speaker: "user" | "agent"; text: string }[];
   nativeLanguageText: string;
   nativeLanguage: string;
+  // keyPhrases this user has already been given. The model is asked to reuse
+  // one verbatim when the new request means the same thing, so the phrasebook
+  // groups paraphrases ("could you repeat that" / "could you say that again")
+  // instead of listing them as separate entries.
+  knownPhrases?: string[];
 }
 
 export interface SuggestPhraseResult {
   suggestedText: string;
+  keyPhrase: string;
+  category: StruggleCategory;
 }
 
 export interface LLMProvider {

@@ -55,7 +55,7 @@ export function HelpMeSayThisPanel({
     setLoading(true);
     setError(null);
     try {
-      const result = await api.requestHelpPhrase(sessionId, nativeText.trim(), nativeLanguage);
+      const result = await api.requestHelpPhrase(nativeText.trim(), nativeLanguage, sessionId);
       setSuggestion({ eventId: result.id, suggestedText: result.suggestedText });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -67,7 +67,7 @@ export function HelpMeSayThisPanel({
   async function handleUse() {
     if (!suggestion) return;
     try {
-      await api.markHelpPhraseUsed(sessionId, suggestion.eventId);
+      await api.markHelpPhraseUsed(suggestion.eventId);
     } catch {
       // Non-critical usage tracking -- don't block the user from continuing.
     }

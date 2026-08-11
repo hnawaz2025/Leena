@@ -5,6 +5,7 @@ import { DocumentExplanationScreen } from "../screens/DocumentExplanationScreen"
 import { DocumentUploadScreen } from "../screens/DocumentUploadScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { OnboardingScreen } from "../screens/OnboardingScreen";
+import { PhrasebookScreen } from "../screens/PhrasebookScreen";
 import { ScenarioSetupScreen } from "../screens/ScenarioSetupScreen";
 import { colors, fontFamily } from "../theme";
 import type { RootStackParamList } from "./types";
@@ -48,6 +49,11 @@ export function RootNavigator() {
         name="DocumentExplanation"
         component={DocumentExplanationScreen}
         options={{ title: "Explain document" }}
+      />
+      <Stack.Screen
+        name="Phrasebook"
+        component={PhrasebookScreen}
+        options={{ title: "Your phrases" }}
       />
     </Stack.Navigator>
   );

@@ -81,6 +81,14 @@ export interface HelpSuggestionDTO {
   suggestedText: string;
 }
 
+export interface PhraseEntryDTO {
+  keyPhrase: string;
+  suggestedText: string;
+  lookupCount: number;
+  lastLookedUpAt: string;
+  mastered: boolean;
+}
+
 export interface ScenarioSessionSummaryDTO {
   id: string;
   attemptNumber: number;

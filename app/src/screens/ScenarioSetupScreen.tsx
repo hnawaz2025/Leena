@@ -17,7 +17,9 @@ type Props = NativeStackScreenProps<RootStackParamList, "ScenarioSetup">;
 export function ScenarioSetupScreen({ route, navigation }: Props) {
   const [documentId, setDocumentId] = useState(route.params?.documentId);
   const [situationNative, setSituationNative] = useState("");
-  const [situationEnglish, setSituationEnglish] = useState("");
+  // Seeded when the user escalates from a quick lookup ("practice a
+  // conversation like this") so they don't retype what they just asked about.
+  const [situationEnglish, setSituationEnglish] = useState(route.params?.prefillEnglish ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nativeLanguage = useAppStore((s) => s.nativeLanguage);

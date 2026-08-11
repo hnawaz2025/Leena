@@ -1,5 +1,4 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import * as ImagePicker from "expo-image-picker";
 import { Camera, Image as ImageIcon, Lock } from "lucide-react-native";
 import { useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -7,6 +6,7 @@ import { api } from "../api/client";
 import { BreathingDot } from "../components/BreathingDot";
 import { Button } from "../components/Button";
 import { TextField } from "../components/TextField";
+import { useDocumentCapture } from "../hooks/useDocumentCapture";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, radius, spacing, typography } from "../theme";
 
@@ -20,48 +20,19 @@ export function DocumentUploadScreen({ navigation }: Props) {
   const [text, setText] = useState("");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [savedDocumentId, setSavedDocumentId] = useState<string | null>(null);
-  const [scanning, setScanning] = useState(false);
   const [loading, setLoading] = useState<"scenario" | "explain" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { capture, scanning, error: captureError, setError: setCaptureError } = useDocumentCapture();
 
   async function handlePickImage(source: "camera" | "library") {
     setError(null);
-    const permission =
-      source === "camera"
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError(
-        source === "camera"
-          ? "Camera permission is required to photograph a document."
-          : "Photo library permission is required to attach a picture."
-      );
-      return;
-    }
+    setCaptureError(null);
+    const captured = await capture(source);
+    if (!captured) return;
 
-    const result =
-      source === "camera"
-        ? await ImagePicker.launchCameraAsync({ base64: true, quality: 0.7 })
-        : await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.7 });
-
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    if (!asset?.base64) return;
-
-    setPhotoUri(asset.uri);
+    setPhotoUri(captured.uri);
     setSavedDocumentId(null); // a new photo means a new document, not the previous saved one
-    setScanning(true);
-    try {
-      const { text: extractedText } = await api.extractDocumentImage(
-        asset.base64,
-        asset.mimeType ?? "image/jpeg"
-      );
-      setText(extractedText);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't read that photo. Try again or paste the text.");
-    } finally {
-      setScanning(false);
-    }
+    setText(captured.text);
   }
 
   async function ensureSaved(): Promise<string> {
@@ -165,7 +136,7 @@ export function DocumentUploadScreen({ navigation }: Props) {
         numberOfLines={10}
       />
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {(error || captureError) ? <Text style={styles.error}>{error || captureError}</Text> : null}
 
       <Button
         label="Practice a conversation about it"

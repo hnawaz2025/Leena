@@ -106,21 +106,43 @@ model FeedbackReport {
   createdAt                 DateTime @default(now())
 }
 
+// Why the user got stuck. Tagged on every help request so recurring
+// patterns are countable across scenarios later ("mostly formality") rather
+// than being uniquely-worded freeform strings. Nothing consumes this yet --
+// it's collected now so the pattern layer has history to work with.
+enum StruggleCategory {
+  VOCABULARY // didn't know a specific word/phrase
+  GRAMMAR // tense, sentence structure
+  CONFIDENCE // hesitation, incomplete answers
+  COMPREHENSION // misunderstood the other party
+  FORMALITY // wrong register/tone for the situation
+  DOMAIN_KNOWLEDGE // didn't understand a concept, not just a word
+}
+
 // Deliberately separate from Turn: a help-request must never leak into
-// chatTurn's history or analyzeSession's transcript. Kept for a future
-// WHOOP-style metrics dashboard (usage patterns, e.g. "used help mostly on
-// medical vocabulary"), not consumed by anything yet.
+// chatTurn's history or analyzeSession's transcript.
+//
+// sessionId is optional on purpose. Set = the user got stuck mid-rehearsal;
+// null = they hit the quick-lookup button in real life. Same kind of event
+// either way ("I didn't know how to say this"), so one table keeps the
+// cross-cutting question -- what does this person keep getting stuck on,
+// wherever it happened -- a single query.
 model TranslationAssistEvent {
-  id                 String   @id @default(uuid())
+  id                 String            @id @default(uuid())
   userId             String
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessionId          String
-  session            Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId          String?
+  session            Session?          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   nativeLanguage     String
   nativeLanguageText String
   suggestedText      String
-  wasUsed            Boolean  @default(false)
-  createdAt          DateTime @default(now())
+  // Normalized English phrase (lowercased, no trailing punctuation) -- the
+  // key the phrasebook groups on, so looking the same thing up five times
+  // collapses to one entry with a count instead of five rows of noise.
+  keyPhrase          String            @default("")
+  category           StruggleCategory?
+  wasUsed            Boolean           @default(false)
+  createdAt          DateTime          @default(now())
 
   @@index([userId])
   @@index([sessionId])
