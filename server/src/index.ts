@@ -8,6 +8,7 @@ import { loadEnv } from "./env";
 import { errorHandler } from "./middleware/errorHandler";
 import { documentsRouter } from "./routes/documents";
 import { helpRouter } from "./routes/help";
+import { metricsRouter } from "./routes/metrics";
 import { scenariosRouter } from "./routes/scenarios";
 import { sessionsRouter } from "./routes/sessions";
 import { speechRouter } from "./routes/speech";
@@ -41,6 +42,7 @@ app.use("/documents", documentsRouter);
 app.use("/scenarios", scenariosRouter);
 app.use("/sessions", sessionsRouter);
 app.use("/help", helpRouter);
+app.use("/metrics", metricsRouter);
 app.use("/speech", speechRouter);
 
 app.use(errorHandler);
