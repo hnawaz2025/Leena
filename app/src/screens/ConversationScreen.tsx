@@ -60,6 +60,10 @@ export function ConversationScreen({ route, navigation }: Props) {
   const [startingAgain, setStartingAgain] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [helpPanelOpen, setHelpPanelOpen] = useState(false);
+  // Whether what's currently in the box came from the help panel. Tracked here
+  // rather than inferred server-side from the text, because the user can edit a
+  // suggestion before sending and we must not later credit them for it.
+  const [inputCameFromHelp, setInputCameFromHelp] = useState(false);
   const [tab, setTab] = useState<"chat" | "feedback">("chat");
   const [infoOpen, setInfoOpen] = useState(false);
   const [expandedTurnsBySessionId, setExpandedTurnsBySessionId] = useState<Record<string, TurnDTO[]>>({});
@@ -118,9 +122,11 @@ export function ConversationScreen({ route, navigation }: Props) {
     setSending(true);
     setError(null);
     const text = input.trim();
+    const aided = inputCameFromHelp;
     setInput("");
+    setInputCameFromHelp(false);
     try {
-      await api.sendTurn(currentSession.id, text, scenario.language);
+      await api.sendTurn(currentSession.id, text, scenario.language, aided);
       const { data: updatedTurns } = await refetchCurrentTurns();
       const lastTurn = updatedTurns?.[updatedTurns.length - 1];
       if (lastTurn?.speaker === "agent") {
@@ -277,6 +283,7 @@ export function ConversationScreen({ route, navigation }: Props) {
                   nativeLanguage={nativeLanguage}
                   onUse={(englishText) => {
                     setInput((prev) => (prev ? `${prev} ${englishText}` : englishText));
+                    setInputCameFromHelp(true);
                     setHelpPanelOpen(false);
                   }}
                   onClose={() => setHelpPanelOpen(false)}
@@ -294,7 +301,12 @@ export function ConversationScreen({ route, navigation }: Props) {
                   style={styles.input}
                   placeholder={`Type or speak in ${scenario?.language ?? "English"}…`}
                   value={input}
-                  onChangeText={setInput}
+                  onChangeText={(next) => {
+                    setInput(next);
+                    // Emptying the box discards the suggestion, so whatever
+                    // they type next is their own again.
+                    if (!next.trim()) setInputCameFromHelp(false);
+                  }}
                   editable={!sending}
                 />
                 <Pressable onPress={handleSend} disabled={sending || !input.trim()}>

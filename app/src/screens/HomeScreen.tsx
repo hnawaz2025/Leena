@@ -16,6 +16,7 @@ import { Card } from "../components/Card";
 import { EmptyState } from "../components/EmptyState";
 import { FadeInItem } from "../components/FadeInItem";
 import { BreathingDot } from "../components/BreathingDot";
+import { MetricStrip } from "../components/MetricStrip";
 import { MicButton } from "../components/MicButton";
 import { QuickLookupSheet } from "../components/QuickLookupSheet";
 import { RotatingPlaceholder } from "../components/RotatingPlaceholder";
@@ -51,6 +52,7 @@ export function HomeScreen({ navigation }: Props) {
   });
 
   const { data: phrases } = useQuery({ queryKey: ["phrases"], queryFn: api.listPhrases });
+  const { data: metrics } = useQuery({ queryKey: ["metrics"], queryFn: api.getMetrics });
 
   const queryClient = useQueryClient();
   const deleteScenario = useMutation({
@@ -98,6 +100,19 @@ export function HomeScreen({ navigation }: Props) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.content}>
+        {metrics?.ready && (metrics.independence || metrics.recovery || metrics.coverage) ? (
+          <MetricStrip
+            metrics={[
+              ...(metrics.independence
+                ? [{ label: "Independence", metric: metrics.independence }]
+                : []),
+              ...(metrics.recovery ? [{ label: "Recovery", metric: metrics.recovery }] : []),
+              ...(metrics.coverage ? [{ label: "Coverage", metric: metrics.coverage }] : []),
+            ]}
+            onPress={() => navigation.navigate("YourEnglish")}
+          />
+        ) : null}
+
         <Text style={styles.sectionLabel}>Your practice</Text>
 
         {isLoading ? (

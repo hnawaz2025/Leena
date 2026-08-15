@@ -98,7 +98,14 @@ sessionsRouter.post(
   })
 );
 
-const turnSchema = z.object({ text: z.string().min(1), language: z.string().min(2) });
+const turnSchema = z.object({
+  text: z.string().min(1),
+  language: z.string().min(2),
+  // Set by the client when this text came out of the help panel. See the
+  // comment on Turn.fromSuggestion for why this is recorded rather than
+  // inferred from the text afterwards.
+  fromSuggestion: z.boolean().optional().default(false),
+});
 
 sessionsRouter.post(
   "/:id/turns",
@@ -120,6 +127,7 @@ sessionsRouter.post(
         speaker: "user",
         text: parsed.data.text,
         language: parsed.data.language,
+        fromSuggestion: parsed.data.fromSuggestion,
       },
     });
 
@@ -140,8 +148,8 @@ sessionsRouter.post(
     }
 
     // chatTurn internally caps how much of this history it actually sends to
-    // the model (see MAX_HISTORY_TURNS_FOR_CHAT in anthropicLLMProvider.ts) so
-    // cost/context-window usage doesn't grow unbounded with session length.
+    // the model (see MAX_HISTORY_TURNS_FOR_CHAT in featherlessLLMProvider.ts)
+    // so cost/context-window usage doesn't grow unbounded with session length.
     const result = await getLLMProvider().chatTurn({
       personaDescription: session.scenario.personaDescription,
       contextSummary: session.scenario.contextSummary,

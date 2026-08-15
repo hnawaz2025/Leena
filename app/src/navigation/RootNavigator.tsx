@@ -7,6 +7,7 @@ import { HomeScreen } from "../screens/HomeScreen";
 import { OnboardingScreen } from "../screens/OnboardingScreen";
 import { PhrasebookScreen } from "../screens/PhrasebookScreen";
 import { ScenarioSetupScreen } from "../screens/ScenarioSetupScreen";
+import { YourEnglishScreen } from "../screens/YourEnglishScreen";
 import { colors, fontFamily } from "../theme";
 import type { RootStackParamList } from "./types";
 
@@ -54,6 +55,11 @@ export function RootNavigator() {
         name="Phrasebook"
         component={PhrasebookScreen}
         options={{ title: "Your phrases" }}
+      />
+      <Stack.Screen
+        name="YourEnglish"
+        component={YourEnglishScreen}
+        options={{ title: "Your English" }}
       />
     </Stack.Navigator>
   );

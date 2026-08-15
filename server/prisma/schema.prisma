@@ -84,14 +84,20 @@ model Session {
 }
 
 model Turn {
-  id        String   @id @default(uuid())
-  sessionId String
-  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  speaker   String
-  text      String
-  audioUrl  String?
-  language  String
-  createdAt DateTime @default(now())
+  id             String   @id @default(uuid())
+  sessionId      String
+  session        Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  speaker        String
+  text           String
+  audioUrl       String?
+  language       String
+  // True when this turn started life as a "Help me say this" suggestion.
+  // Recorded at write time rather than inferred later: the user can edit a
+  // suggestion before sending it, so matching the text afterwards would credit
+  // them for a sentence the app wrote -- exactly backwards for a feature meant
+  // to counter underestimating themselves.
+  fromSuggestion Boolean  @default(false)
+  createdAt      DateTime @default(now())
 
   @@index([sessionId])
 }

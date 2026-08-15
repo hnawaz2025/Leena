@@ -6,4 +6,5 @@ export type RootStackParamList = {
   Conversation: { scenarioId: string };
   DocumentExplanation: { documentId: string; documentType: string };
   Phrasebook: undefined;
+  YourEnglish: undefined;
 };

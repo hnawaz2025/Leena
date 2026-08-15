@@ -78,13 +78,16 @@ export const api = {
   listTurns: (sessionId: string) =>
     request<import("@leena/shared").TurnDTO[]>(`/sessions/${sessionId}/turns`),
 
-  sendTurn: (sessionId: string, text: string, language: string) =>
+  // fromSuggestion marks text that came out of the help panel, so metrics can
+  // tell "you said this yourself" from "the app wrote this for you" even when
+  // the user edited it before sending.
+  sendTurn: (sessionId: string, text: string, language: string, fromSuggestion = false) =>
     request<{
       userTurn: import("@leena/shared").TurnDTO;
       agentTurn: import("@leena/shared").TurnDTO;
     }>(`/sessions/${sessionId}/turns`, {
       method: "POST",
-      body: JSON.stringify({ text, language }),
+      body: JSON.stringify({ text, language, fromSuggestion }),
     }),
 
   endSession: (sessionId: string) =>
@@ -109,6 +112,8 @@ export const api = {
 
   markHelpPhraseUsed: (eventId: string) =>
     request<void>(`/help/${eventId}/use`, { method: "POST" }),
+
+  getMetrics: () => request<import("@leena/shared").MetricsDTO>("/metrics"),
 
   listPhrases: () => request<import("@leena/shared").PhraseEntryDTO[]>("/help/phrases"),
 
