@@ -112,17 +112,9 @@ export interface TranscribeResult {
   text: string;
 }
 
-export interface SynthesizeInput {
-  text: string;
-  language: string;
-}
-
-export interface SynthesizeResult {
-  audio: Buffer;
-  mimeType: string;
-}
-
+// Transcription only. Speaking text aloud is done on-device by expo-speech,
+// which is free and instant -- paying a cloud API per character to read back
+// text the app already has would be a poor trade.
 export interface SpeechProvider {
   transcribe(input: TranscribeInput): Promise<TranscribeResult>;
-  synthesize(input: SynthesizeInput): Promise<SynthesizeResult>;
 }

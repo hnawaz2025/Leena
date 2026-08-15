@@ -1,4 +1,3 @@
-import { AnthropicLLMProvider } from "./providers/anthropicLLMProvider";
 import { FeatherlessLLMProvider } from "./providers/featherlessLLMProvider";
 import { OpenAISpeechProvider } from "./providers/openaiSpeechProvider";
 import type { LLMProvider, SpeechProvider } from "./types";
@@ -11,14 +10,8 @@ let speechProvider: SpeechProvider | null = null;
 export function getLLMProvider(): LLMProvider {
   if (llmProvider) return llmProvider;
 
-  const providerName = process.env.AI_LLM_PROVIDER ?? "anthropic";
+  const providerName = process.env.AI_LLM_PROVIDER ?? "featherless";
   switch (providerName) {
-    case "anthropic": {
-      const apiKey = process.env.ANTHROPIC_API_KEY;
-      if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-      llmProvider = new AnthropicLLMProvider(apiKey);
-      return llmProvider;
-    }
     case "featherless": {
       const apiKey = process.env.FEATHERLESS_API_KEY;
       const model = process.env.FEATHERLESS_MODEL;

@@ -26,7 +26,7 @@ import type {
 } from "../types";
 
 // A long conversation grows the prompt (and cost) on every single turn if we
-// send the whole history. This also matters more here than on Anthropic:
+// send the whole history. It also matters here specifically because
 // Featherless's Chat plan caps context at 32K tokens.
 const MAX_HISTORY_TURNS_FOR_CHAT = 16;
 const MAX_TRANSCRIPT_TURNS_FOR_ANALYSIS = 40;

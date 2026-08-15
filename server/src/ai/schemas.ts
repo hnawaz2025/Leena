@@ -1,8 +1,9 @@
 import { z } from "zod";
 
-// Schemas for the two LLM calls that must return structured JSON. Anthropic
-// doesn't guarantee valid/well-shaped JSON from a prompt alone, so every
-// parsed response is validated against these before it touches the database.
+// Schemas for every LLM call that must return structured JSON. No model
+// guarantees valid, well-shaped JSON from a prompt alone -- least of all a
+// small open-weight one -- so every parsed response is validated against these
+// before it touches the database.
 
 export const generatedScenarioSchema = z.object({
   title: z.string().min(1),

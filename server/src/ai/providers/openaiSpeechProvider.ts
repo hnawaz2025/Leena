@@ -1,5 +1,5 @@
 import OpenAI, { toFile } from "openai";
-import type { SpeechProvider, SynthesizeInput, SynthesizeResult, TranscribeInput, TranscribeResult } from "../types";
+import type { SpeechProvider, TranscribeInput, TranscribeResult } from "../types";
 
 // Whisper's `language` hint alone isn't always enough to pick the right
 // script for languages that share near-identical spoken form but different
@@ -28,15 +28,5 @@ export class OpenAISpeechProvider implements SpeechProvider {
       prompt: input.language ? SCRIPT_BIAS_PROMPTS[input.language] : undefined,
     });
     return { text: result.text };
-  }
-
-  async synthesize(input: SynthesizeInput): Promise<SynthesizeResult> {
-    const response = await this.client.audio.speech.create({
-      model: "tts-1",
-      voice: "alloy",
-      input: input.text,
-    });
-    const arrayBuffer = await response.arrayBuffer();
-    return { audio: Buffer.from(arrayBuffer), mimeType: "audio/mpeg" };
   }
 }
