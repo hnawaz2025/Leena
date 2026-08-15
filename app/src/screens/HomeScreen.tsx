@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Camera, Sprout } from "lucide-react-native";
 import { useState } from "react";
 import {
@@ -18,13 +18,15 @@ import { FadeInItem } from "../components/FadeInItem";
 import { BreathingDot } from "../components/BreathingDot";
 import { MicButton } from "../components/MicButton";
 import { QuickLookupSheet } from "../components/QuickLookupSheet";
+import { RotatingPlaceholder } from "../components/RotatingPlaceholder";
+import { SwipeableRow } from "../components/SwipeableRow";
 import { TextField } from "../components/TextField";
 import { useDocumentCapture } from "../hooks/useDocumentCapture";
 import { useVoiceRecording } from "../hooks/useVoiceRecording";
 import type { RootStackParamList } from "../navigation/types";
 import { useAppStore } from "../store/useAppStore";
 import { colors, radius, spacing, typography } from "../theme";
-import { getSituationExample, toLanguageCode } from "../utils/languageCodes";
+import { getQuickLookupExamples, toLanguageCode } from "../utils/languageCodes";
 import { relativeDate } from "../utils/relativeDate";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Home">;
@@ -49,6 +51,12 @@ export function HomeScreen({ navigation }: Props) {
   });
 
   const { data: phrases } = useQuery({ queryKey: ["phrases"], queryFn: api.listPhrases });
+
+  const queryClient = useQueryClient();
+  const deleteScenario = useMutation({
+    mutationFn: api.deleteScenario,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["scenarios"] }),
+  });
 
   function submitLookup(text: string) {
     if (!text.trim()) return;
@@ -107,27 +115,35 @@ export function HomeScreen({ navigation }: Props) {
             }
             renderItem={({ item, index }) => (
               <FadeInItem index={index}>
-                <Pressable onPress={() => navigation.navigate("Conversation", { scenarioId: item.id })}>
-                  <Card
-                    accentColor={item.latestStatus === "completed" ? colors.success : colors.primary}
-                    style={styles.card}
+                <SwipeableRow onDelete={() => deleteScenario.mutate(item.id)}>
+                  <Pressable
+                    onPress={() => navigation.navigate("Conversation", { scenarioId: item.id })}
                   >
-                    <View style={styles.cardRow}>
-                      <View style={styles.cardTextGroup}>
-                        <Text style={styles.cardTitle} numberOfLines={1}>
-                          {item.title}
-                        </Text>
-                        <Text style={styles.cardMeta}>
-                          {relativeDate(item.latestStartedAt)}
-                          {item.attemptCount > 1 ? ` · Practice ${item.attemptCount}` : ""}
+                    <Card
+                      accentColor={item.latestStatus === "completed" ? colors.success : colors.primary}
+                      style={styles.card}
+                    >
+                      <View style={styles.cardRow}>
+                        <View style={styles.cardTextGroup}>
+                          <Text style={styles.cardTitle} numberOfLines={1}>
+                            {item.title}
+                          </Text>
+                          <Text style={styles.cardMeta}>
+                            {relativeDate(item.latestStartedAt)}
+                            {item.attemptCount > 1 ? ` · Practice ${item.attemptCount}` : ""}
+                          </Text>
+                        </View>
+                        <Text style={styles.cardStatus}>
+                          {item.checklistTotal > 0
+                            ? `${item.checklistCovered} / ${item.checklistTotal}`
+                            : item.latestStatus === "completed"
+                              ? "Done"
+                              : "In progress"}
                         </Text>
                       </View>
-                      <Text style={styles.cardStatus}>
-                        {item.latestStatus === "completed" ? "Done" : "In progress"}
-                      </Text>
-                    </View>
-                  </Card>
-                </Pressable>
+                    </Card>
+                  </Pressable>
+                </SwipeableRow>
               </FadeInItem>
             )}
             onEndReachedThreshold={0.5}
@@ -168,14 +184,19 @@ export function HomeScreen({ navigation }: Props) {
         <Pressable style={styles.cameraButton} onPress={handleCameraPress} disabled={scanning}>
           <Camera size={20} color={colors.textSecondary} strokeWidth={2} />
         </Pressable>
-        <TextField
-          style={styles.input}
-          placeholder={getSituationExample(nativeLanguage)}
-          value={lookupText}
-          onChangeText={setLookupText}
-          onSubmitEditing={() => submitLookup(lookupText)}
-          returnKeyType="send"
-        />
+        <View style={styles.input}>
+          <TextField
+            placeholder=""
+            value={lookupText}
+            onChangeText={setLookupText}
+            onSubmitEditing={() => submitLookup(lookupText)}
+            returnKeyType="send"
+          />
+          <RotatingPlaceholder
+            phrases={getQuickLookupExamples(nativeLanguage)}
+            visible={!lookupText}
+          />
+        </View>
         <MicButton state={voice.state} onPress={handleMicPress} />
       </View>
 

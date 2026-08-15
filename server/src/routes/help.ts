@@ -132,6 +132,34 @@ helpRouter.get(
   })
 );
 
+const deletePhraseSchema = z.object({
+  keyPhrase: z.string().min(1),
+});
+
+// A phrasebook entry is a group of lookups, so removing one deletes every
+// event behind it. This is a real delete rather than a hide: people look up
+// genuinely sensitive things here -- medical, legal, immigration -- and when
+// they remove one they mean it. The cost is that historical counts shift,
+// which is the right trade.
+//
+// keyPhrase travels as a query param rather than a path segment because it's
+// arbitrary natural language and may contain slashes.
+helpRouter.delete(
+  "/phrases",
+  requireUser,
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const parsed = deletePhraseSchema.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+    const { count } = await prisma.translationAssistEvent.deleteMany({
+      where: { userId: req.userId!, keyPhrase: parsed.data.keyPhrase },
+    });
+    if (count === 0) return res.status(404).json({ error: "Phrase not found" });
+
+    res.status(204).end();
+  })
+);
+
 // Fired when the user taps "Use this" mid-rehearsal or "I said it" after a
 // real-world lookup -- in both cases a self-reported confirmation that the
 // phrase actually got spoken.

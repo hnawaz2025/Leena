@@ -112,7 +112,15 @@ export const api = {
 
   listPhrases: () => request<import("@leena/shared").PhraseEntryDTO[]>("/help/phrases"),
 
+  deletePhrase: (keyPhrase: string) =>
+    request<void>(`/help/phrases?keyPhrase=${encodeURIComponent(keyPhrase)}`, {
+      method: "DELETE",
+    }),
+
   listScenarios: () => request<import("@leena/shared").ScenarioListItemDTO[]>("/scenarios"),
+
+  deleteScenario: (scenarioId: string) =>
+    request<void>(`/scenarios/${scenarioId}`, { method: "DELETE" }),
 
   listScenarioSessions: (scenarioId: string) =>
     request<import("@leena/shared").ScenarioSessionSummaryDTO[]>(`/scenarios/${scenarioId}/sessions`),

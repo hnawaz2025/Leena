@@ -40,19 +40,44 @@ export function assertNoUnexpectedScript(text: string, expectedLanguage: string)
   }
 }
 
+// `validate` is for structural problems that would corrupt data if accepted
+// -- mismatched array lengths, out-of-range indices. Those retry and then
+// fail the call.
+//
+// `softValidate` is for quality problems where a degraded answer still beats
+// no answer, chiefly the small-model habit of leaking stray CJK/Cyrillic into
+// other languages. Those retry too, but on the last attempt the result is
+// accepted with a warning rather than throwing -- losing a whole feedback
+// report over a few foreign characters in one sentence is the worse outcome.
 export async function callForJson<T>(
   schema: z.ZodType<T>,
   callModel: (correctionNote?: string) => Promise<string>,
-  validate?: (parsed: T) => void
+  validate?: (parsed: T) => void,
+  softValidate?: (parsed: T) => void
 ): Promise<T> {
   let lastError: unknown;
+  const lastAttempt = 1;
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt <= lastAttempt; attempt++) {
     const correctionNote = attempt === 0 ? undefined : JSON_CORRECTION_NOTE;
     try {
       const text = await callModel(correctionNote);
       const parsed = schema.parse(JSON.parse(extractJsonBlock(text)));
       validate?.(parsed);
+
+      if (softValidate) {
+        try {
+          softValidate(parsed);
+        } catch (error) {
+          if (attempt < lastAttempt) throw error;
+          console.warn(
+            `Accepting AI response despite quality check: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
+      }
+
       return parsed;
     } catch (error) {
       lastError = error;

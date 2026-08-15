@@ -55,6 +55,10 @@ model Scenario {
   personaDescription String
   contextSummary     String
   language           String
+  // The things this conversation demands, as [{ en, native }]. Generated once
+  // at the first session end and never rewritten -- coverage can only
+  // accumulate against a target that doesn't move between attempts.
+  checklist          Json?
   createdAt          DateTime  @default(now())
   sessions           Session[]
 
@@ -103,6 +107,10 @@ model FeedbackReport {
   vocabularySuggestions     Json
   conversationSummary       String   @default("")
   conversationSummaryNative String   @default("")
+  // Indices into the scenario's checklist that this session covered. Stored
+  // per session and append-only; total coverage is derived by unioning across
+  // the scenario's reports, which keeps "new this time" recoverable.
+  coveredIndices            Json     @default("[]")
   createdAt                 DateTime @default(now())
 }
 
@@ -132,7 +140,10 @@ model TranslationAssistEvent {
   userId             String
   user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   sessionId          String?
-  session            Session?          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  // SetNull, not Cascade: deleting a scenario must not destroy phrases the
+  // user learned while practising it. The phrase outlives the session it came
+  // from and simply stops being attributable to one.
+  session            Session?          @relation(fields: [sessionId], references: [id], onDelete: SetNull)
   nativeLanguage     String
   nativeLanguageText String
   suggestedText      String

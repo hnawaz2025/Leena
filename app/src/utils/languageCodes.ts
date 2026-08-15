@@ -26,3 +26,21 @@ const SITUATION_EXAMPLES: Record<string, string> = {
 export function getSituationExample(displayName: string): string {
   return SITUATION_EXAMPLES[displayName] ?? "e.g. Talking to my landlord about a lease renewal";
 }
+
+// Separate from the examples above: Scenario Setup asks you to *describe a
+// situation*, while the quick-lookup box on Home asks for the thing you
+// actually want to say out loud. Both versions of the same sentence are kept
+// so the placeholder can alternate between them -- the cheapest way to show
+// that either language is accepted, without a line of instructions.
+const QUICK_LOOKUP_EXAMPLES: Record<string, string> = {
+  Spanish: "Quiero devolver esto",
+  Mandarin: "我想退这个",
+  Hindi: "मुझे यह वापस करना है",
+};
+
+const QUICK_LOOKUP_EXAMPLE_ENGLISH = "I'd like to return this";
+
+export function getQuickLookupExamples(displayName: string): string[] {
+  const native = QUICK_LOOKUP_EXAMPLES[displayName];
+  return native ? [native, QUICK_LOOKUP_EXAMPLE_ENGLISH] : [QUICK_LOOKUP_EXAMPLE_ENGLISH];
+}

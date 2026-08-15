@@ -13,6 +13,21 @@ export const generatedScenarioSchema = z.object({
 });
 export type GeneratedScenario = z.infer<typeof generatedScenarioSchema>;
 
+// The fixed set of things a given conversation demands. Generated once per
+// scenario and then immutable -- coverage can only accumulate against a
+// target that doesn't move.
+export const checklistSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        en: z.string().min(1),
+        native: z.string().min(1),
+      })
+    )
+    .min(1),
+});
+export type ChecklistResult = z.infer<typeof checklistSchema>;
+
 export const analyzeSessionResultSchema = z.object({
   summary: z.string().min(1),
   summaryNative: z.string().min(1),
@@ -26,6 +41,9 @@ export const analyzeSessionResultSchema = z.object({
   ),
   conversationSummary: z.string().min(1),
   conversationSummaryNative: z.string().min(1),
+  // Indices into the scenario's checklist that this transcript shows the user
+  // actually handled. Empty when no checklist was supplied.
+  coveredIndices: z.array(z.number().int().min(0)),
 });
 export type AnalyzeSessionResult = z.infer<typeof analyzeSessionResultSchema>;
 

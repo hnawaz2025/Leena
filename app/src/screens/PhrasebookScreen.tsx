@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Speech from "expo-speech";
 import { BookOpen, Volume2 } from "lucide-react-native";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -7,28 +7,31 @@ import type { PhraseEntryDTO } from "@leena/shared";
 import { api } from "../api/client";
 import { BreathingDot } from "../components/BreathingDot";
 import { EmptyState } from "../components/EmptyState";
+import { SwipeableRow } from "../components/SwipeableRow";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, radius, spacing, typography } from "../theme";
 import { relativeDate } from "../utils/relativeDate";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Phrasebook">;
 
-function PhraseRow({ phrase }: { phrase: PhraseEntryDTO }) {
+function PhraseRow({ phrase, onDelete }: { phrase: PhraseEntryDTO; onDelete: () => void }) {
   return (
-    <Pressable
-      style={styles.row}
-      onPress={() => Speech.speak(phrase.suggestedText, { language: "en-US" })}
-    >
-      <View style={styles.rowTextGroup}>
-        <Text style={styles.phrase}>{phrase.suggestedText}</Text>
-        <Text style={styles.meta}>
-          {phrase.mastered
-            ? `last needed ${relativeDate(phrase.lastLookedUpAt)}`
-            : `looked up ${phrase.lookupCount}×`}
-        </Text>
-      </View>
-      <Volume2 size={18} color={colors.primary} strokeWidth={2} />
-    </Pressable>
+    <SwipeableRow onDelete={onDelete} bottomInset={spacing.sm}>
+      <Pressable
+        style={styles.row}
+        onPress={() => Speech.speak(phrase.suggestedText, { language: "en-US" })}
+      >
+        <View style={styles.rowTextGroup}>
+          <Text style={styles.phrase}>{phrase.suggestedText}</Text>
+          <Text style={styles.meta}>
+            {phrase.mastered
+              ? `last needed ${relativeDate(phrase.lastLookedUpAt)}`
+              : `looked up ${phrase.lookupCount}×`}
+          </Text>
+        </View>
+        <Volume2 size={18} color={colors.primary} strokeWidth={2} />
+      </Pressable>
+    </SwipeableRow>
   );
 }
 
@@ -37,9 +40,15 @@ function PhraseRow({ phrase }: { phrase: PhraseEntryDTO }) {
 // is what actually reduces anxiety, and it's only visible because repeats
 // collapse instead of piling up as a log.
 export function PhrasebookScreen({}: Props) {
+  const queryClient = useQueryClient();
   const { data: phrases, isLoading } = useQuery({
     queryKey: ["phrases"],
     queryFn: api.listPhrases,
+  });
+
+  const deletePhrase = useMutation({
+    mutationFn: api.deletePhrase,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["phrases"] }),
   });
 
   if (isLoading) {
@@ -70,7 +79,11 @@ export function PhrasebookScreen({}: Props) {
         <>
           <Text style={styles.sectionTitle}>Still learning · {learning.length}</Text>
           {learning.map((p) => (
-            <PhraseRow key={p.keyPhrase} phrase={p} />
+            <PhraseRow
+              key={p.keyPhrase}
+              phrase={p}
+              onDelete={() => deletePhrase.mutate(p.keyPhrase)}
+            />
           ))}
         </>
       ) : null}
@@ -79,7 +92,11 @@ export function PhrasebookScreen({}: Props) {
         <>
           <Text style={styles.sectionTitle}>You've got these · {mastered.length}</Text>
           {mastered.map((p) => (
-            <PhraseRow key={p.keyPhrase} phrase={p} />
+            <PhraseRow
+              key={p.keyPhrase}
+              phrase={p}
+              onDelete={() => deletePhrase.mutate(p.keyPhrase)}
+            />
           ))}
         </>
       ) : null}

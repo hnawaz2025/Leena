@@ -1,6 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { ScenarioDTO, ScenarioListItemDTO, ScenarioSessionSummaryDTO } from "@leena/shared";
+import type {
+  ChecklistItemDTO,
+  ScenarioDTO,
+  ScenarioListItemDTO,
+  ScenarioSessionSummaryDTO,
+} from "@leena/shared";
 import { getLLMProvider } from "../ai";
 import { prisma } from "../db";
 import { asyncHandler } from "../middleware/asyncHandler";
@@ -89,18 +94,26 @@ scenariosRouter.get(
   asyncHandler(async (req: AuthedRequest, res) => {
     const scenarios = await prisma.scenario.findMany({
       where: { userId: req.userId! },
-      include: { sessions: { orderBy: { startedAt: "desc" } } },
+      include: {
+        sessions: { orderBy: { startedAt: "desc" }, include: { feedback: true } },
+      },
     });
 
     const dtos: ScenarioListItemDTO[] = scenarios
       .filter((s) => s.sessions.length > 0)
       .map((s) => {
         const latest = s.sessions[0];
+        const checklist = (s.checklist as ChecklistItemDTO[] | null) ?? [];
+        const covered = new Set(
+          s.sessions.flatMap((session) => (session.feedback?.coveredIndices as number[]) ?? [])
+        );
         return {
           ...toDTO(s),
           latestStatus: latest.status as "active" | "completed",
           latestStartedAt: latest.startedAt.toISOString(),
           attemptCount: s.sessions.length,
+          checklistTotal: checklist.length,
+          checklistCovered: covered.size,
         };
       })
       .sort((a, b) => new Date(b.latestStartedAt).getTime() - new Date(a.latestStartedAt).getTime());
@@ -118,6 +131,23 @@ scenariosRouter.get(
     });
     if (!scenario) return res.status(404).json({ error: "Scenario not found" });
     res.json(toDTO(scenario));
+  })
+);
+
+// Removes the scenario and everything session-scoped under it (turns,
+// feedback). Phrases the user picked up survive -- see the SetNull on
+// TranslationAssistEvent.session.
+scenariosRouter.delete(
+  "/:id",
+  requireUser,
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const scenario = await prisma.scenario.findFirst({
+      where: { id: req.params.id, userId: req.userId! },
+    });
+    if (!scenario) return res.status(404).json({ error: "Scenario not found" });
+
+    await prisma.scenario.delete({ where: { id: scenario.id } });
+    res.status(204).end();
   })
 );
 

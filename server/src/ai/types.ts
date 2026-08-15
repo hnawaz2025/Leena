@@ -1,5 +1,6 @@
 import type {
   AnalyzeSessionResult,
+  ChecklistResult,
   DocumentExplanation,
   GeneratedScenario,
   StruggleCategory,
@@ -7,6 +8,7 @@ import type {
 export type {
   GeneratedScenario,
   AnalyzeSessionResult,
+  ChecklistResult,
   DocumentExplanation,
   StruggleCategory,
 } from "./schemas";
@@ -24,16 +26,32 @@ export interface ChatTurnInput {
   targetLanguage: string;
   history: { speaker: "user" | "agent"; text: string }[];
   userText: string;
+  // Checklist items the user hasn't handled yet. The persona is asked to
+  // steer toward these, so a repeat attempt explores the gaps instead of
+  // replaying the same conversation.
+  focusItems?: string[];
 }
 
 export interface ChatTurnResult {
   agentText: string;
 }
 
+export interface GenerateChecklistInput {
+  title: string;
+  situationType: string;
+  personaDescription: string;
+  contextSummary: string;
+  targetLanguage: string;
+  nativeLanguage: string;
+}
+
 export interface AnalyzeSessionInput {
   targetLanguage: string;
   nativeLanguage: string;
   transcript: { speaker: "user" | "agent"; text: string }[];
+  // The scenario's fixed checklist, in English. analyzeSession only reports
+  // which of these the transcript covered -- it never edits the list.
+  checklist?: string[];
 }
 
 export interface ExplainDocumentInput {
@@ -77,6 +95,7 @@ export interface SuggestPhraseResult {
 export interface LLMProvider {
   generateScenario(input: GenerateScenarioInput): Promise<GeneratedScenario>;
   chatTurn(input: ChatTurnInput): Promise<ChatTurnResult>;
+  generateChecklist(input: GenerateChecklistInput): Promise<ChecklistResult>;
   analyzeSession(input: AnalyzeSessionInput): Promise<AnalyzeSessionResult>;
   explainDocument(input: ExplainDocumentInput): Promise<DocumentExplanation>;
   extractDocumentText(input: ExtractDocumentTextInput): Promise<ExtractDocumentTextResult>;

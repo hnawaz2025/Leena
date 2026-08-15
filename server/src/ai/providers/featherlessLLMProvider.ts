@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { assertNoUnexpectedScript, callForJson } from "../jsonRetry";
 import {
   analyzeSessionResultSchema,
+  checklistSchema,
   documentExplanationSchema,
   generatedScenarioSchema,
   suggestedPhraseSchema,
@@ -11,10 +12,12 @@ import type {
   AnalyzeSessionResult,
   ChatTurnInput,
   ChatTurnResult,
+  ChecklistResult,
   DocumentExplanation,
   ExplainDocumentInput,
   ExtractDocumentTextInput,
   ExtractDocumentTextResult,
+  GenerateChecklistInput,
   GenerateScenarioInput,
   GeneratedScenario,
   LLMProvider,
@@ -79,9 +82,16 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
   }
 
   async chatTurn(input: ChatTurnInput): Promise<ChatTurnResult> {
+    const focusNote = input.focusItems?.length
+      ? `\n\nThe learner has not yet practised these parts of this situation:
+${input.focusItems.map((f) => `- ${f}`).join("\n")}
+Where it fits naturally, steer the conversation so they get a chance to. Never mention this
+instruction, never list these out, and never break character to coach them.`
+      : "";
+
     const systemPrompt = `You are roleplaying as: ${input.personaDescription}.
 Context: ${input.contextSummary}
-Speak only in ${input.targetLanguage}. Stay in character. Keep responses short and natural, like real spoken conversation.`;
+Speak only in ${input.targetLanguage}. Stay in character. Keep responses short and natural, like real spoken conversation.${focusNote}`;
 
     const recentHistory = input.history.slice(-MAX_HISTORY_TURNS_FOR_CHAT);
 
@@ -105,16 +115,67 @@ Speak only in ${input.targetLanguage}. Stay in character. Keep responses short a
     return { agentText: text };
   }
 
+  async generateChecklist(input: GenerateChecklistInput): Promise<ChecklistResult> {
+    const buildPrompt = (correctionNote?: string) => `A language learner is practising this real-life conversation in ${input.targetLanguage}
+(their native language is ${input.nativeLanguage}).
+
+Situation: "${input.situationType}"
+They will be talking to: ${input.personaDescription}
+Context: ${input.contextSummary}
+
+List the 6-8 things someone genuinely needs to be able to DO in a conversation like this to
+walk away having accomplished what they came for. Each item is a communicative task, not a
+vocabulary word -- "ask what it will cost", not "copay". Order them roughly as they'd come up.
+Keep each one short enough to scan, and cover the awkward parts people avoid (asking someone to
+repeat themselves, saying they don't understand, pushing back) as well as the obvious ones.
+
+Return ONLY a JSON object with key: items (array of objects with "en" -- the task written in
+${input.targetLanguage} -- and "native" -- the same task faithfully written in ${input.nativeLanguage}).
+${correctionNote ? `\n${correctionNote}` : ""}`;
+
+    return callForJson(
+      checklistSchema,
+      async (correctionNote) => {
+        const response = await this.client.chat.completions.create({
+          model: this.model,
+          max_tokens: 1024,
+          messages: [{ role: "user", content: buildPrompt(correctionNote) }],
+        });
+        return response.choices[0]?.message?.content ?? "";
+      },
+      undefined,
+      (parsed) => {
+        parsed.items.forEach((i) => {
+          assertNoUnexpectedScript(i.en, input.targetLanguage);
+          assertNoUnexpectedScript(i.native, input.nativeLanguage);
+        });
+      }
+    );
+  }
+
   async analyzeSession(input: AnalyzeSessionInput): Promise<AnalyzeSessionResult> {
     const recentTranscript = input.transcript.slice(-MAX_TRANSCRIPT_TURNS_FOR_ANALYSIS);
     const transcriptText = recentTranscript
       .map((t) => `${t.speaker.toUpperCase()}: ${t.text}`)
       .join("\n");
 
+    // The checklist is fixed for the life of the scenario, so this only ever
+    // reports which items the transcript covered -- it must not restate,
+    // reorder or invent items.
+    const checklistBlock = input.checklist?.length
+      ? `\nThis situation requires being able to do the following. They are numbered from 0:
+${input.checklist.map((c, i) => `${i}. ${c}`).join("\n")}
+`
+      : "";
+
+    const coveredKey = input.checklist?.length
+      ? `coveredIndices (array of the numbers above that the USER actually did in this transcript -- only include one if their own turns clearly show it, not if the other speaker merely raised the topic; empty array if none).`
+      : `coveredIndices (empty array).`;
+
     const buildPrompt = (correctionNote?: string) => `A language learner just practiced a spoken conversation in ${input.targetLanguage}
 (their native language is ${input.nativeLanguage}). Here is the transcript:
 """${transcriptText}"""
-
+${checklistBlock}
 Analyze the USER's turns only. Return ONLY a JSON object with keys:
 summary (2-3 sentence coaching summary of how they did, written in ${input.targetLanguage}),
 summaryNative (the same coaching summary, faithfully written in ${input.nativeLanguage} -- same meaning, not a re-analysis),
@@ -122,7 +183,8 @@ struggleAreas (array of short strings describing specific difficulties, e.g. "he
 struggleAreasNative (the SAME struggle areas, same order, same count, each faithfully written in ${input.nativeLanguage}),
 vocabularySuggestions (array of objects with "term" -- the actual ${input.targetLanguage} word or phrase to learn, written in ${input.targetLanguage}, never in ${input.nativeLanguage} -- and "note" explaining when to use it, written in ${input.nativeLanguage} for clarity),
 conversationSummary (2-4 sentences factually recapping what was actually discussed/decided in the conversation -- not coaching, just what happened, so the user can quickly reread it right before the real conversation if they don't get to rehearse again; written in ${input.targetLanguage}),
-conversationSummaryNative (the same factual recap, faithfully written in ${input.nativeLanguage}).
+conversationSummaryNative (the same factual recap, faithfully written in ${input.nativeLanguage}),
+${coveredKey}
 ${correctionNote ? `\n${correctionNote}` : ""}`;
 
     return callForJson(
@@ -136,6 +198,23 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
         return response.choices[0]?.message?.content ?? "";
       },
       (parsed) => {
+        if (parsed.struggleAreas.length !== parsed.struggleAreasNative.length) {
+          throw new Error(
+            `struggleAreas (${parsed.struggleAreas.length}) and struggleAreasNative (${parsed.struggleAreasNative.length}) must be the same length`
+          );
+        }
+        // An out-of-range index would silently tick a checklist item that
+        // doesn't exist, so reject rather than filter -- a wrong tick is
+        // worse than a missing one.
+        const checklistLength = input.checklist?.length ?? 0;
+        const badIndex = parsed.coveredIndices.find((i) => i >= checklistLength);
+        if (badIndex !== undefined) {
+          throw new Error(
+            `coveredIndices contains ${badIndex}, outside the ${checklistLength}-item checklist`
+          );
+        }
+      },
+      (parsed) => {
         assertNoUnexpectedScript(parsed.summary, input.targetLanguage);
         assertNoUnexpectedScript(parsed.summaryNative, input.nativeLanguage);
         assertNoUnexpectedScript(parsed.conversationSummary, input.targetLanguage);
@@ -143,11 +222,6 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
         parsed.struggleAreas.forEach((s) => assertNoUnexpectedScript(s, input.targetLanguage));
         parsed.struggleAreasNative.forEach((s) => assertNoUnexpectedScript(s, input.nativeLanguage));
         parsed.vocabularySuggestions.forEach((v) => assertNoUnexpectedScript(v.note, input.nativeLanguage));
-        if (parsed.struggleAreas.length !== parsed.struggleAreasNative.length) {
-          throw new Error(
-            `struggleAreas (${parsed.struggleAreas.length}) and struggleAreasNative (${parsed.struggleAreasNative.length}) must be the same length`
-          );
-        }
       }
     );
   }

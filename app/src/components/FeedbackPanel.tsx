@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { CheckCircle2, Circle } from "lucide-react-native";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { api } from "../api/client";
@@ -58,6 +59,20 @@ export function FeedbackPanel({
   const conversationSummary =
     lang === "english" ? feedback.conversationSummary : feedback.conversationSummaryNative;
 
+  // Ticks reflect every attempt at this scenario, not just this one -- the
+  // question the user is asking is "can I do this yet", not "did I do it in
+  // the last ten minutes".
+  const covered = new Set(feedback.cumulativeCoveredIndices);
+  const newThisTime = new Set(feedback.coveredIndices);
+  const items = feedback.checklist.map((item, index) => ({
+    text: lang === "english" ? item.en : item.native,
+    done: covered.has(index),
+    isNew: newThisTime.has(index),
+    index,
+  }));
+  const doneItems = items.filter((i) => i.done);
+  const remainingItems = items.filter((i) => !i.done);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Nice work — here's what to sharpen</Text>
@@ -75,6 +90,33 @@ export function FeedbackPanel({
       </Card>
 
       <Text style={styles.summary}>{summary}</Text>
+
+      {items.length > 0 ? (
+        <>
+          <Text style={styles.sectionTitle}>
+            You can handle {doneItems.length} of {items.length} things that come up
+          </Text>
+          {doneItems.map((item) => (
+            <View key={item.index} style={styles.checkRow}>
+              <CheckCircle2 size={16} color={colors.success} strokeWidth={2.5} />
+              <Text style={styles.checkDone}>{item.text}</Text>
+              {item.isNew ? <Text style={styles.newBadge}>new</Text> : null}
+            </View>
+          ))}
+
+          {remainingItems.length > 0 ? (
+            <>
+              <Text style={styles.sectionTitle}>Also worth practising</Text>
+              {remainingItems.map((item) => (
+                <View key={item.index} style={styles.checkRow}>
+                  <Circle size={16} color={colors.textMuted} strokeWidth={2} />
+                  <Text style={styles.checkTodo}>{item.text}</Text>
+                </View>
+              ))}
+            </>
+          ) : null}
+        </>
+      ) : null}
 
       <View style={styles.statStrip}>
         <Text style={styles.statText}>
@@ -103,7 +145,7 @@ export function FeedbackPanel({
       ))}
 
       <Button
-        label="Practice this again"
+        label={remainingItems.length > 0 ? "Practice these" : "Practice this again"}
         onPress={onPracticeAgain}
         loading={practiceAgainLoading}
         style={styles.primaryButton}
@@ -133,6 +175,22 @@ const styles = StyleSheet.create({
   statText: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.primaryDark },
   statDivider: { ...typography.caption, color: colors.textMuted },
   sectionTitle: { ...typography.h2, fontSize: 16, marginTop: spacing.sm, marginBottom: spacing.md },
+  checkRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  checkDone: { ...typography.body, flex: 1 },
+  checkTodo: { ...typography.body, flex: 1, color: colors.textSecondary },
+  newBadge: {
+    ...typography.caption,
+    fontFamily: typography.bodyBold.fontFamily,
+    color: colors.success,
+    textTransform: "uppercase",
+    fontSize: 10,
+    marginTop: 2,
+  },
   struggleCard: { marginBottom: spacing.sm },
   struggleText: { ...typography.body },
   vocabItem: {

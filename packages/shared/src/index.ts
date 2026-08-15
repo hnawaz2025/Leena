@@ -41,6 +41,14 @@ export interface SessionDTO {
   status: "active" | "completed";
 }
 
+// A type alias rather than an interface so it satisfies Prisma's
+// InputJsonValue when written to a Json column -- interfaces don't pick up
+// the implicit index signature that requires.
+export type ChecklistItemDTO = {
+  en: string;
+  native: string;
+};
+
 export interface FeedbackReportDTO {
   id: string;
   sessionId: string;
@@ -51,6 +59,11 @@ export interface FeedbackReportDTO {
   vocabularySuggestions: { term: string; note: string }[];
   conversationSummary: string;
   conversationSummaryNative: string;
+  // The scenario's fixed checklist, plus what this session covered and what
+  // every attempt has covered between them.
+  checklist: ChecklistItemDTO[];
+  coveredIndices: number[];
+  cumulativeCoveredIndices: number[];
   createdAt: string;
 }
 
@@ -102,4 +115,7 @@ export interface ScenarioListItemDTO extends ScenarioDTO {
   latestStatus: "active" | "completed";
   latestStartedAt: string;
   attemptCount: number;
+  // Both 0 until the first session ends and a checklist exists.
+  checklistTotal: number;
+  checklistCovered: number;
 }
