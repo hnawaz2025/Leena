@@ -54,9 +54,7 @@ export interface FeedbackReportDTO {
   sessionId: string;
   summary: string;
   summaryNative: string;
-  struggleAreas: string[];
-  struggleAreasNative: string[];
-  vocabularySuggestions: { term: string; note: string }[];
+  vocabularySuggestions: { term: string; note: string; noteNative: string }[];
   conversationSummary: string;
   conversationSummaryNative: string;
   // The scenario's fixed checklist, plus what this session covered and what
@@ -99,7 +97,7 @@ export interface PhraseEntryDTO {
   suggestedText: string;
   lookupCount: number;
   lastLookedUpAt: string;
-  mastered: boolean;
+  practiceCount: number;
 }
 
 export type MetricBand = "low" | "mid" | "high";
@@ -114,13 +112,15 @@ export interface IndependenceEvidenceDTO {
   // A turn they produced entirely on their own -- the counterweight to
   // systematically underestimating themselves.
   bestUnaidedTurn: string | null;
-}
-
-export interface RecoveryEvidenceDTO {
-  // Moments where an open question got an acknowledgment instead of an
-  // answer, quoted verbatim from the transcript.
-  moments: { question: string; reply: string }[];
-  rescuePhrase: string;
+  // Raw number of times the help panel was opened. Distinct from the score,
+  // which counts *turns* that leaned on it -- this keeps the magnitude that
+  // turn-counting discards (asking once vs six times on one sentence).
+  helpRequestCount: number;
+  // Times they asked someone to repeat or explain. Shown as a win, not a
+  // failure: it's the behaviour the app exists to build.
+  clarificationCount: number;
+  // Moments where a question got a dodge instead of an answer, quoted verbatim.
+  nonAnswerMoments: { question: string; reply: string }[];
 }
 
 export interface CoverageEvidenceDTO {
@@ -141,8 +141,14 @@ export interface CoverageEvidenceDTO {
 export interface MetricDTO<E> {
   value: number;
   band: MetricBand;
+  // Short, honest phrase ("getting there") -- not a count. The exact fraction
+  // lives in count/total instead of being stuffed into this string.
   bandLabel: string;
-  // The same metric over the preceding window, for the trend arrow. Null
+  // The exact numerator/denominator behind `value`, for displaying a precise
+  // fraction (e.g. a ring's center text) rather than a rounded percentage.
+  count: number;
+  total: number;
+  // The same metric over the preceding window, for the trend marker. Null
   // until there's enough history to compare against.
   previous: number | null;
   evidence: E;
@@ -153,7 +159,6 @@ export interface MetricDTO<E> {
 export interface MetricsDTO {
   ready: boolean;
   independence: MetricDTO<IndependenceEvidenceDTO> | null;
-  recovery: MetricDTO<RecoveryEvidenceDTO> | null;
   coverage: MetricDTO<CoverageEvidenceDTO> | null;
 }
 

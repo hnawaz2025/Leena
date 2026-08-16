@@ -100,18 +100,25 @@ export function HomeScreen({ navigation }: Props) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.content}>
-        {metrics?.ready && (metrics.independence || metrics.recovery || metrics.coverage) ? (
+        {metrics?.ready && (metrics.independence || metrics.coverage) ? (
           <MetricStrip
             metrics={[
               ...(metrics.independence
                 ? [{ label: "Independence", metric: metrics.independence }]
                 : []),
-              ...(metrics.recovery ? [{ label: "Recovery", metric: metrics.recovery }] : []),
               ...(metrics.coverage ? [{ label: "Coverage", metric: metrics.coverage }] : []),
             ]}
             onPress={() => navigation.navigate("YourEnglish")}
           />
         ) : null}
+
+        <Pressable
+          style={styles.rehearseButtonTop}
+          onPress={() => navigation.navigate("ScenarioSetup", undefined)}
+        >
+          <Text style={styles.rehearseText}>Rehearse a conversation</Text>
+          <ArrowRight size={14} color={colors.primary} strokeWidth={2.5} />
+        </Pressable>
 
         <Text style={styles.sectionLabel}>Your practice</Text>
 
@@ -166,23 +173,14 @@ export function HomeScreen({ navigation }: Props) {
         )}
       </View>
 
-      <View style={styles.linkRow}>
-        <Pressable
-          style={styles.rehearseButton}
-          onPress={() => navigation.navigate("ScenarioSetup", undefined)}
-        >
-          <Text style={styles.rehearseText}>Rehearse a conversation</Text>
-          <ArrowRight size={14} color={colors.primary} strokeWidth={2.5} />
-        </Pressable>
-
-        {phrases?.length ? (
+      {phrases?.length ? (
+        <View style={styles.linkRow}>
           <Pressable style={styles.rehearseButton} onPress={() => navigation.navigate("Phrasebook")}>
-            <Text style={styles.rehearseText}>
-              Your phrases · {phrases.filter((p) => p.mastered).length}/{phrases.length}
-            </Text>
+            <Text style={styles.rehearseText}>Your phrases</Text>
+            <ArrowRight size={14} color={colors.primary} strokeWidth={2.5} />
           </Pressable>
-        ) : null}
-      </View>
+        </View>
+      ) : null}
 
       {(voice.error || captureError || cameraError) ? (
         <Text style={styles.error}>{voice.error || captureError || cameraError}</Text>
@@ -232,6 +230,15 @@ export function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.xl },
+  rehearseButtonTop: {
+    flexDirection: "row",
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.lg,
+  },
   sectionLabel: {
     ...typography.caption,
     fontFamily: typography.bodyBold.fontFamily,

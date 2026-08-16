@@ -30,9 +30,22 @@ export interface ScenarioForCoverage {
 const BAND_LOW = 40;
 const BAND_HIGH = 75;
 
+// Describes ONE scenario's own readiness -- accurate to say a single
+// conversation is "just started".
 const BAND_LABELS: Record<MetricBand, string> = {
   low: "just started",
   mid: "partly ready",
+  high: "ready",
+};
+
+// Describes the aggregate across the whole window. Deliberately not
+// BAND_LABELS -- "just started" applied to "1 of 4 ready" (25%) claims nothing
+// is ready when something already is. "Still preparing" doesn't make that
+// claim, so it stays true even when the count is nonzero. The ring shows the
+// exact count; this only needs to carry tone.
+const HEADLINE_BAND_LABELS: Record<MetricBand, string> = {
+  low: "still preparing",
+  mid: "getting there",
   high: "ready",
 };
 
@@ -88,18 +101,6 @@ function computeEvidence(scenarios: ScenarioForCoverage[]): CoverageEvidenceDTO 
   };
 }
 
-// The headline is a count, not a single conversation's state, so it needs its
-// own wording rather than borrowing BAND_LABELS -- those describe how ready
-// ONE scenario is ("just started" / "partly ready" / "ready"), and applying
-// that same word to the aggregate is actively misleading: 1 of 4 scenarios
-// ready is 25%, and labelling a 25% figure "just started" implies nothing is
-// ready yet when something already is.
-function headlineLabel(readyCount: number, total: number): string {
-  if (readyCount === 0) return "not ready yet";
-  if (readyCount === total) return total === 1 ? "ready" : `ready for all ${total}`;
-  return `${readyCount} of ${total} ready`;
-}
-
 export function computeCoverage(
   current: ScenarioForCoverage[],
   previous: ScenarioForCoverage[]
@@ -108,11 +109,14 @@ export function computeCoverage(
 
   const readyCount = current.filter(isReady).length;
   const value = Math.round((readyCount / current.length) * 100);
+  const band = bandFor(value);
 
   return {
     value,
-    band: bandFor(value),
-    bandLabel: headlineLabel(readyCount, current.length),
+    band,
+    bandLabel: HEADLINE_BAND_LABELS[band],
+    count: readyCount,
+    total: current.length,
     previous: computeCoverageValue(previous),
     evidence: computeEvidence(current),
   };

@@ -1,49 +1,39 @@
-import { TrendingDown, TrendingUp } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { MetricDTO } from "@leena/shared";
 import { colors, radius, spacing, typography } from "../theme";
+import { MetricRing } from "./MetricRing";
 
 interface MetricStripProps {
-  // Evidence-agnostic: the strip only ever shows the number, its band and the
-  // trend, so it doesn't care which metric it's handed.
+  // Evidence-agnostic: the strip only ever shows the ring, its band and the
+  // previous-value tick, so it doesn't care which metric it's handed.
   metrics: { label: string; metric: MetricDTO<unknown> }[];
   onPress: () => void;
 }
 
-// The at-a-glance row. Deliberately just the number and its band -- the band
-// is what makes a bare number mean something without needing the formula,
-// the same way "recovery 34" reads instantly once you've seen a few.
-// Built to hold three; renders however many exist so far.
+const RING_SIZE = 72;
+
+// The at-a-glance row. A ring per metric rather than a bare 0-100 number --
+// the fill still reads as "mostly full" at a glance, but the center shows the
+// exact fraction instead of an abstract percentage.
 export function MetricStrip({ metrics, onPress }: MetricStripProps) {
   if (metrics.length === 0) return null;
 
   return (
     <Pressable style={styles.strip} onPress={onPress}>
-      {metrics.map(({ label, metric }) => {
-        const delta = metric.previous === null ? null : metric.value - metric.previous;
-        return (
-          <View key={label} style={styles.cell}>
-            <Text style={styles.label}>{label}</Text>
-            <Text style={styles.value}>{metric.value}</Text>
-            <Text style={styles.band} numberOfLines={1}>
-              {metric.bandLabel}
-            </Text>
-            {delta !== null && delta !== 0 ? (
-              <View style={styles.trendRow}>
-                {delta > 0 ? (
-                  <TrendingUp size={11} color={colors.success} strokeWidth={2.5} />
-                ) : (
-                  <TrendingDown size={11} color={colors.textMuted} strokeWidth={2.5} />
-                )}
-                <Text style={[styles.trend, delta > 0 && styles.trendUp]}>
-                  {delta > 0 ? "+" : ""}
-                  {delta}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        );
-      })}
+      {metrics.map(({ label, metric }) => (
+        <View key={label} style={styles.cell}>
+          <Text style={styles.label}>{label}</Text>
+          <MetricRing
+            size={RING_SIZE}
+            value={metric.value}
+            previous={metric.previous}
+            band={metric.band}
+            count={metric.count}
+            total={metric.total}
+            caption={metric.bandLabel}
+          />
+        </View>
+      ))}
     </Pressable>
   );
 }
@@ -51,6 +41,7 @@ export function MetricStrip({ metrics, onPress }: MetricStripProps) {
 const styles = StyleSheet.create({
   strip: {
     flexDirection: "row",
+    justifyContent: "space-around",
     backgroundColor: colors.surface,
     borderRadius: radius.card,
     borderWidth: 1,
@@ -59,7 +50,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginBottom: spacing.xl,
   },
-  cell: { flex: 1, alignItems: "center", gap: 2 },
+  cell: { alignItems: "center", gap: spacing.xs },
   label: {
     ...typography.caption,
     fontSize: 10,
@@ -67,9 +58,4 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     color: colors.textMuted,
   },
-  value: { ...typography.display, fontSize: 32, lineHeight: 38, color: colors.primaryDark },
-  band: { ...typography.caption, fontSize: 11, textAlign: "center" },
-  trendRow: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 2 },
-  trend: { ...typography.caption, fontSize: 11, color: colors.textMuted },
-  trendUp: { color: colors.success },
 });

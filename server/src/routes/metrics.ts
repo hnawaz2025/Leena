@@ -3,7 +3,6 @@ import type { ChecklistItemDTO, MetricsDTO } from "@leena/shared";
 import { prisma } from "../db";
 import { computeCoverage, type ScenarioForCoverage } from "../metrics/coverage";
 import { computeIndependence, type SessionForMetrics } from "../metrics/independence";
-import { computeRecovery } from "../metrics/recovery";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { requireUser, type AuthedRequest } from "../middleware/deviceAuth";
 
@@ -17,7 +16,7 @@ export const metricsRouter = Router();
 // A window rather than all history, because a lifetime average stops moving:
 // someone fifty conversations in would be permanently weighed down by their
 // first forty and the number could never show progress.
-const WINDOW_SIZE = 5;
+const WINDOW_SIZE = 4;
 
 // Below this there isn't enough history for any number to be honest, so the
 // whole strip stays hidden rather than showing a confident-looking figure
@@ -26,9 +25,9 @@ const MIN_SESSIONS_FOR_METRICS = 2;
 
 // Coverage windows by scenario, not by session -- three attempts at the same
 // doctor's appointment is one conversation to be ready for, not three. Same
-// value as WINDOW_SIZE for consistency, kept as a separate name because it
-// counts a different thing.
-const SCENARIO_WINDOW_SIZE = 5;
+// value as WINDOW_SIZE so both metrics agree on "recent", kept as a separate
+// name because it counts a different thing.
+const SCENARIO_WINDOW_SIZE = 4;
 
 metricsRouter.get(
   "/",
@@ -41,6 +40,7 @@ metricsRouter.get(
       include: {
         turns: { orderBy: { createdAt: "asc" } },
         translationAssistEvents: true,
+        feedback: { select: { nonAnswerTurnIndices: true, clarificationTurnIndices: true } },
       },
     });
 
@@ -48,7 +48,6 @@ metricsRouter.get(
       const empty: MetricsDTO = {
         ready: false,
         independence: null,
-        recovery: null,
         coverage: null,
       };
       return res.json(empty);
@@ -98,6 +97,8 @@ metricsRouter.get(
         text: t.text,
         fromSuggestion: t.fromSuggestion,
       })),
+      nonAnswerTurnIndices: (s.feedback?.nonAnswerTurnIndices as number[]) ?? [],
+      clarificationTurnIndices: (s.feedback?.clarificationTurnIndices as number[]) ?? [],
       helpEvents: s.translationAssistEvents.map((e) => ({
         keyPhrase: e.keyPhrase,
         suggestedText: e.suggestedText,
@@ -117,7 +118,6 @@ metricsRouter.get(
     const dto: MetricsDTO = {
       ready: true,
       independence: computeIndependence(current, previous),
-      recovery: computeRecovery(current, previous),
       coverage: computeCoverage(currentScenarios, previousScenarios),
     };
     res.json(dto);
