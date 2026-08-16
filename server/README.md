@@ -45,6 +45,18 @@ npm run dev            # tsx watch on src/index.ts, port 4000
 
 `npm run dev` restarts on save. Health check: `curl localhost:4000/health`.
 
+```bash
+npm test         # node:test via tsx — no test framework dependency
+npm run typecheck
+```
+
+Tests cover the modules that are pure functions over plain inputs: the two
+metrics, error classification, and the JSON retry/script guard. They're
+deliberately written around the promises that would be worst to break —
+clarification never scoring against the user, the app never crediting itself
+for a sentence it wrote, and no unrecognised error text ever reaching a
+client — rather than around line coverage.
+
 ### Environment
 
 Validated at boot by [`src/env.ts`](src/env.ts) — the process exits with a
@@ -497,9 +509,8 @@ tracked here so the next person doesn't have to rediscover them.
 
 **Structural**
 
-- **No tests.** The metrics layer is pure functions with plain inputs and
-  deterministic outputs — the easiest thing in the repo to test, and the place
-  where a silent regression would be least visible.
+- **Only the pure modules are tested.** Routes, middleware and the providers
+  have no coverage; that needs a test database and a mocked provider.
 - **No service layer.** Business logic lives in route handlers; `sessions.ts`
   is the biggest one, and "end a session" needs to be callable off the request
   path eventually.
