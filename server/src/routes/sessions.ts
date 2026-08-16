@@ -229,23 +229,23 @@ sessionsRouter.post(
       update: {
         summary: analysis.summary,
         summaryNative: analysis.summaryNative,
-        struggleAreas: analysis.struggleAreas,
-        struggleAreasNative: analysis.struggleAreasNative,
         vocabularySuggestions: analysis.vocabularySuggestions,
         conversationSummary: analysis.conversationSummary,
         conversationSummaryNative: analysis.conversationSummaryNative,
         coveredIndices: analysis.coveredIndices,
+        nonAnswerTurnIndices: analysis.nonAnswerTurnIndices,
+        clarificationTurnIndices: analysis.clarificationTurnIndices,
       },
       create: {
         sessionId: session.id,
         summary: analysis.summary,
         summaryNative: analysis.summaryNative,
-        struggleAreas: analysis.struggleAreas,
-        struggleAreasNative: analysis.struggleAreasNative,
         vocabularySuggestions: analysis.vocabularySuggestions,
         conversationSummary: analysis.conversationSummary,
         conversationSummaryNative: analysis.conversationSummaryNative,
         coveredIndices: analysis.coveredIndices,
+        nonAnswerTurnIndices: analysis.nonAnswerTurnIndices,
+        clarificationTurnIndices: analysis.clarificationTurnIndices,
       },
     });
 
@@ -282,9 +282,11 @@ sessionsRouter.get(
       sessionId: feedback.sessionId,
       summary: feedback.summary,
       summaryNative: feedback.summaryNative,
-      struggleAreas: feedback.struggleAreas as string[],
-      struggleAreasNative: feedback.struggleAreasNative as string[],
-      vocabularySuggestions: feedback.vocabularySuggestions as { term: string; note: string }[],
+      vocabularySuggestions: feedback.vocabularySuggestions as {
+        term: string;
+        note: string;
+        noteNative: string;
+      }[],
       conversationSummary: feedback.conversationSummary,
       conversationSummaryNative: feedback.conversationSummaryNative,
       checklist: (session.scenario.checklist as ChecklistItemDTO[] | null) ?? [],

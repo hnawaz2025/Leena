@@ -155,8 +155,12 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
 
   async analyzeSession(input: AnalyzeSessionInput): Promise<AnalyzeSessionResult> {
     const recentTranscript = input.transcript.slice(-MAX_TRANSCRIPT_TURNS_FOR_ANALYSIS);
+    // Turns are numbered so the model can point at specific ones. The numbers
+    // are positions in the *slice*, so they get offset back to real transcript
+    // positions before this function returns.
+    const sliceOffset = Math.max(0, input.transcript.length - MAX_TRANSCRIPT_TURNS_FOR_ANALYSIS);
     const transcriptText = recentTranscript
-      .map((t) => `${t.speaker.toUpperCase()}: ${t.text}`)
+      .map((t, i) => `[${i}] ${t.speaker.toUpperCase()}: ${t.text}`)
       .join("\n");
 
     // The checklist is fixed for the life of the scenario, so this only ever
@@ -179,15 +183,15 @@ ${checklistBlock}
 Analyze the USER's turns only. Return ONLY a JSON object with keys:
 summary (2-3 sentence coaching summary of how they did, written in ${input.targetLanguage}),
 summaryNative (the same coaching summary, faithfully written in ${input.nativeLanguage} -- same meaning, not a re-analysis),
-struggleAreas (array of short strings describing specific difficulties, e.g. "hesitated on past tense verbs", written in ${input.targetLanguage}),
-struggleAreasNative (the SAME struggle areas, same order, same count, each faithfully written in ${input.nativeLanguage}),
-vocabularySuggestions (array of objects with "term" -- the actual ${input.targetLanguage} word or phrase to learn, written in ${input.targetLanguage}, never in ${input.nativeLanguage} -- and "note" explaining when to use it, written in ${input.nativeLanguage} for clarity),
+vocabularySuggestions (array of objects with "term" -- the actual ${input.targetLanguage} word or phrase to learn, written in ${input.targetLanguage}, never in ${input.nativeLanguage} -- "note" explaining when to use it, written in ${input.targetLanguage} -- and "noteNative", the SAME explanation faithfully written in ${input.nativeLanguage}),
 conversationSummary (2-4 sentences factually recapping what was actually discussed/decided in the conversation -- not coaching, just what happened, so the user can quickly reread it right before the real conversation if they don't get to rehearse again; written in ${input.targetLanguage}),
 conversationSummaryNative (the same factual recap, faithfully written in ${input.nativeLanguage}),
 ${coveredKey}
+nonAnswerTurnIndices (array of the [n] numbers of USER turns that dodged instead of answering -- a bare acknowledgment like "okay" or "mm", or a shutdown like "I don't know" or "not sure", in a spot where a real answer was clearly expected. Do NOT include a short answer that actually carries information, e.g. "Two weeks." or "Dr. Smith." Do NOT include "good"/"fine" in reply to a greeting. Empty array if none),
+clarificationTurnIndices (array of the [n] numbers of USER turns that asked for repetition or explanation -- "could you say that again", "what does that mean", "I don't understand, can you help me". These are GOOD: never also list them in nonAnswerTurnIndices, even when they contain phrases like "I don't understand". Empty array if none).
 ${correctionNote ? `\n${correctionNote}` : ""}`;
 
-    return callForJson(
+    const result = await callForJson(
       analyzeSessionResultSchema,
       async (correctionNote) => {
         const response = await this.client.chat.completions.create({
@@ -198,11 +202,6 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
         return response.choices[0]?.message?.content ?? "";
       },
       (parsed) => {
-        if (parsed.struggleAreas.length !== parsed.struggleAreasNative.length) {
-          throw new Error(
-            `struggleAreas (${parsed.struggleAreas.length}) and struggleAreasNative (${parsed.struggleAreasNative.length}) must be the same length`
-          );
-        }
         // An out-of-range index would silently tick a checklist item that
         // doesn't exist, so reject rather than filter -- a wrong tick is
         // worse than a missing one.
@@ -213,17 +212,39 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
             `coveredIndices contains ${badIndex}, outside the ${checklistLength}-item checklist`
           );
         }
+        // Same reasoning for turn indices: pointing at a turn that isn't there
+        // would attribute a non-answer to the wrong sentence.
+        for (const [name, indices] of [
+          ["nonAnswerTurnIndices", parsed.nonAnswerTurnIndices],
+          ["clarificationTurnIndices", parsed.clarificationTurnIndices],
+        ] as const) {
+          const bad = indices.find((i) => i >= recentTranscript.length);
+          if (bad !== undefined) {
+            throw new Error(
+              `${name} contains ${bad}, outside the ${recentTranscript.length}-turn transcript`
+            );
+          }
+        }
       },
       (parsed) => {
         assertNoUnexpectedScript(parsed.summary, input.targetLanguage);
         assertNoUnexpectedScript(parsed.summaryNative, input.nativeLanguage);
         assertNoUnexpectedScript(parsed.conversationSummary, input.targetLanguage);
         assertNoUnexpectedScript(parsed.conversationSummaryNative, input.nativeLanguage);
-        parsed.struggleAreas.forEach((s) => assertNoUnexpectedScript(s, input.targetLanguage));
-        parsed.struggleAreasNative.forEach((s) => assertNoUnexpectedScript(s, input.nativeLanguage));
-        parsed.vocabularySuggestions.forEach((v) => assertNoUnexpectedScript(v.note, input.nativeLanguage));
+        parsed.vocabularySuggestions.forEach((v) => {
+          assertNoUnexpectedScript(v.note, input.targetLanguage);
+          assertNoUnexpectedScript(v.noteNative, input.nativeLanguage);
+        });
       }
     );
+
+    // The model saw a truncated transcript numbered from zero, so shift the
+    // turn indices back onto the real transcript before anyone stores them.
+    return {
+      ...result,
+      nonAnswerTurnIndices: result.nonAnswerTurnIndices.map((i) => i + sliceOffset),
+      clarificationTurnIndices: result.clarificationTurnIndices.map((i) => i + sliceOffset),
+    };
   }
 
   async explainDocument(input: ExplainDocumentInput): Promise<DocumentExplanation> {

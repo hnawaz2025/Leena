@@ -55,7 +55,6 @@ export function FeedbackPanel({
   }
 
   const summary = lang === "english" ? feedback.summary : feedback.summaryNative;
-  const struggleAreas = lang === "english" ? feedback.struggleAreas : feedback.struggleAreasNative;
   const conversationSummary =
     lang === "english" ? feedback.conversationSummary : feedback.conversationSummaryNative;
 
@@ -120,27 +119,16 @@ export function FeedbackPanel({
 
       <View style={styles.statStrip}>
         <Text style={styles.statText}>
-          {feedback.struggleAreas.length} area{feedback.struggleAreas.length === 1 ? "" : "s"} to work on
-        </Text>
-        <Text style={styles.statDivider}>•</Text>
-        <Text style={styles.statText}>
           {feedback.vocabularySuggestions.length} vocabulary tip
           {feedback.vocabularySuggestions.length === 1 ? "" : "s"}
         </Text>
       </View>
 
-      <Text style={styles.sectionTitle}>Where you struggled</Text>
-      {struggleAreas.map((area, i) => (
-        <Card key={i} accentColor={colors.warning} style={styles.struggleCard}>
-          <Text style={styles.struggleText}>{area}</Text>
-        </Card>
-      ))}
-
       <Text style={styles.sectionTitle}>Vocabulary to learn</Text>
       {feedback.vocabularySuggestions.map((v, i) => (
         <View key={i} style={styles.vocabItem}>
           <Text style={styles.vocabTerm}>{v.term}</Text>
-          <Text style={styles.vocabNote}>{v.note}</Text>
+          <Text style={styles.vocabNote}>{lang === "english" ? v.note : v.noteNative}</Text>
         </View>
       ))}
 
@@ -173,7 +161,6 @@ const styles = StyleSheet.create({
   summary: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.lg },
   statStrip: { flexDirection: "row", alignItems: "center", marginBottom: spacing.xl, gap: spacing.sm },
   statText: { ...typography.caption, fontFamily: typography.bodyBold.fontFamily, color: colors.primaryDark },
-  statDivider: { ...typography.caption, color: colors.textMuted },
   sectionTitle: { ...typography.h2, fontSize: 16, marginTop: spacing.sm, marginBottom: spacing.md },
   checkRow: {
     flexDirection: "row",
@@ -191,8 +178,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
   },
-  struggleCard: { marginBottom: spacing.sm },
-  struggleText: { ...typography.body },
   vocabItem: {
     backgroundColor: colors.surfaceWarm,
     borderRadius: radius.card,

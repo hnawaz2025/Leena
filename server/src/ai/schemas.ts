@@ -32,12 +32,11 @@ export type ChecklistResult = z.infer<typeof checklistSchema>;
 export const analyzeSessionResultSchema = z.object({
   summary: z.string().min(1),
   summaryNative: z.string().min(1),
-  struggleAreas: z.array(z.string()),
-  struggleAreasNative: z.array(z.string()),
   vocabularySuggestions: z.array(
     z.object({
       term: z.string().min(1),
       note: z.string().min(1),
+      noteNative: z.string().min(1),
     })
   ),
   conversationSummary: z.string().min(1),
@@ -45,6 +44,15 @@ export const analyzeSessionResultSchema = z.object({
   // Indices into the scenario's checklist that this transcript shows the user
   // actually handled. Empty when no checklist was supplied.
   coveredIndices: z.array(z.number().int().min(0)),
+  // Indices into the transcript, not the checklist. User turns that dodged a
+  // question rather than answering it -- a bare acknowledgment, or a shutdown
+  // like "I don't know" where a real answer was expected.
+  nonAnswerTurnIndices: z.array(z.number().int().min(0)),
+  // User turns that asked for repetition or explanation. Tracked separately
+  // and deliberately NOT counted as non-answers: asking someone to repeat is
+  // the opposite of nodding along, and is the behaviour the app exists to
+  // build.
+  clarificationTurnIndices: z.array(z.number().int().min(0)),
 });
 export type AnalyzeSessionResult = z.infer<typeof analyzeSessionResultSchema>;
 
