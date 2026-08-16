@@ -79,9 +79,11 @@ export const struggleCategorySchema = z.enum([
 ]);
 export type StruggleCategory = z.infer<typeof struggleCategorySchema>;
 
+// No exported type alias for this one: callers get the shape through
+// SuggestPhraseResult in types.ts, which is the interface the LLMProvider
+// contract is written against.
 export const suggestedPhraseSchema = z.object({
   suggestedText: z.string().min(1),
   keyPhrase: z.string().min(1),
   category: struggleCategorySchema,
 });
-export type SuggestedPhrase = z.infer<typeof suggestedPhraseSchema>;

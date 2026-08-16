@@ -1,3 +1,9 @@
+// The contract between routes and whichever AI vendor is configured. Routes
+// import from here and from ./index only -- never from a provider directly,
+// which is what makes a vendor swap a one-file change.
+//
+// Input/result shapes live here; the zod schemas that actually validate model
+// output live in ./schemas.
 import type {
   AnalyzeSessionResult,
   ChecklistResult,

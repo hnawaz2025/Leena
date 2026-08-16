@@ -6,6 +6,10 @@ import { prisma } from "../db";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { requireUser, type AuthedRequest } from "../middleware/deviceAuth";
 
+// The "I got a letter I can't read" path, which is separate from rehearsal:
+// some users only want to understand a confusing document, not practise a
+// conversation about it. A document can optionally go on to ground a scenario
+// (see Scenario.documentId), but it doesn't have to.
 export const documentsRouter = Router();
 
 // Client always sends already-extracted plain text -- either typed directly,

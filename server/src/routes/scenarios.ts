@@ -11,6 +11,10 @@ import { prisma } from "../db";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { requireUser, type AuthedRequest } from "../middleware/deviceAuth";
 
+// A Scenario is a conversation the user needs to have (one doctor's
+// appointment), not one rehearsal of it -- that's a Session. Creating one
+// costs a model call, because the persona on the other side of the
+// conversation has to be invented before anyone can practise against it.
 export const scenariosRouter = Router();
 
 const createSchema = z.object({

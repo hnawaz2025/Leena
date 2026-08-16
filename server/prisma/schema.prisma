@@ -27,7 +27,6 @@ model Document {
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   type          String
   extractedText String
-  storageUrl    String?
   createdAt     DateTime             @default(now())
   scenarios     Scenario[]
   explanation   DocumentExplanation?
@@ -90,7 +89,6 @@ model Turn {
   session        Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   speaker        String
   text           String
-  audioUrl       String?
   language       String
   // True when this turn started life as a "Help me say this" suggestion.
   // Recorded at write time rather than inferred later: the user can edit a
@@ -163,6 +161,11 @@ model TranslationAssistEvent {
   // collapses to one entry with a count instead of five rows of noise.
   keyPhrase          String            @default("")
   category           StruggleCategory?
+  // Self-reported "I actually said this", set by POST /help/:eventId/use when
+  // the user taps "Use this" mid-rehearsal or "I said it" after a real-world
+  // lookup. Write-only today: nothing reads it yet. Kept because it is the
+  // only signal separating a phrase that got spoken from one that was merely
+  // looked at, which is what a "phrases you've actually used" view would need.
   wasUsed            Boolean           @default(false)
   createdAt          DateTime          @default(now())
 

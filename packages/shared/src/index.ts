@@ -27,7 +27,6 @@ export interface TurnDTO {
   sessionId: string;
   speaker: Speaker;
   text: string;
-  audioUrl: string | null;
   language: Language;
   createdAt: string;
 }

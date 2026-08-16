@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+// Environment validation, run once at boot from index.ts.
+//
+// The point is to fail on deploy rather than on a user's first request: a
+// missing API key otherwise looks like a perfectly healthy server that 500s
+// the moment someone tries to practise. Which keys are required depends on
+// which providers are selected, hence the superRefine rather than a flat
+// schema of required strings.
 const baseSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   PORT: z.string().optional(),

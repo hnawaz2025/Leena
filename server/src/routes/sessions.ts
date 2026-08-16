@@ -6,6 +6,17 @@ import { prisma } from "../db";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { requireUser, type AuthedRequest } from "../middleware/deviceAuth";
 
+// One attempt at rehearsing a scenario, and everything that happens inside
+// it. The two routes worth reading carefully:
+//
+//   POST /:id/turns  -- the conversation loop. Writes the user's turn, asks
+//                       the persona for a reply, writes that too.
+//   POST /:id/end    -- teardown. Generates the scenario's checklist if this
+//                       is the first attempt, then runs the analysis that
+//                       every metric and the feedback screen read from.
+//
+// Both are slow by nature (one or two model calls each) and both currently
+// run inline on the request path.
 export const sessionsRouter = Router();
 
 function sessionToDTO(session: {
@@ -31,7 +42,6 @@ function turnToDTO(turn: {
   sessionId: string;
   speaker: string;
   text: string;
-  audioUrl: string | null;
   language: string;
   createdAt: Date;
 }): TurnDTO {
@@ -40,16 +50,10 @@ function turnToDTO(turn: {
     sessionId: turn.sessionId,
     speaker: turn.speaker as "user" | "agent",
     text: turn.text,
-    audioUrl: turn.audioUrl,
     language: turn.language,
     createdAt: turn.createdAt.toISOString(),
   };
 }
-
-const sessionPaginationSchema = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
 
 // A full practice conversation easily exceeds a 20-turn default, and the
 // Conversation screen needs the whole transcript to render, not a page of it.
@@ -57,24 +61,6 @@ const turnPaginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(200),
   offset: z.coerce.number().int().min(0).default(0),
 });
-
-sessionsRouter.get(
-  "/",
-  requireUser,
-  asyncHandler(async (req: AuthedRequest, res) => {
-    const parsed = sessionPaginationSchema.safeParse(req.query);
-    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-
-    const sessions = await prisma.session.findMany({
-      where: { userId: req.userId! },
-      orderBy: { startedAt: "desc" },
-      include: { scenario: true },
-      take: parsed.data.limit,
-      skip: parsed.data.offset,
-    });
-    res.json(sessions.map(sessionToDTO));
-  })
-);
 
 const createSchema = z.object({ scenarioId: z.string().uuid() });
 

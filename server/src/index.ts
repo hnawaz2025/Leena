@@ -1,3 +1,11 @@
+// Entry point: validate config, build the app, mount routes, listen.
+//
+// Middleware order here is load-bearing. requireUser is applied per-router
+// rather than globally so /health and /users/identify stay reachable without
+// a token, and errorHandler must stay last -- Express identifies the terminal
+// error handler by its arity and its position.
+//
+// See README.md for the request lifecycle and the full route table.
 import "dotenv/config";
 import cors from "cors";
 import express from "express";

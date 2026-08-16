@@ -4,6 +4,12 @@ import { getSpeechProvider } from "../ai";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { requireUser } from "../middleware/deviceAuth";
 
+// Audio in, text out. One direction only: speaking text aloud happens
+// on-device via expo-speech, so there is no synthesis endpoint here.
+//
+// Audio arrives base64-encoded inside JSON rather than as multipart, which is
+// what the 15mb body limit in index.ts is sized for -- base64 inflates the
+// payload by roughly a third.
 export const speechRouter = Router();
 
 const transcribeSchema = z.object({

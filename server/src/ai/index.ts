@@ -2,6 +2,15 @@ import { FeatherlessLLMProvider } from "./providers/featherlessLLMProvider";
 import { OpenAISpeechProvider } from "./providers/openaiSpeechProvider";
 import type { LLMProvider, SpeechProvider } from "./types";
 
+// The only way routes get at a model. Returning the interface rather than a
+// concrete class is what kept the Anthropic removal to zero route changes.
+//
+// Memoised per process: constructing a provider builds an HTTP client, and
+// there is no reason for each request to build its own. The `default:` throws
+// are unreachable in practice (env.ts validates these values at boot and
+// exits) but are kept so a direct call in a script fails loudly rather than
+// returning undefined.
+
 export * from "./types";
 
 let llmProvider: LLMProvider | null = null;
