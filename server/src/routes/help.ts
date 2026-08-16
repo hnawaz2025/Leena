@@ -88,12 +88,6 @@ helpRouter.post(
   })
 );
 
-// A phrase counts as learned once it's gone this long without being looked
-// up again. Deliberately derived rather than stored: no state to maintain and
-// nothing to go stale. A rough heuristic worth revisiting once there's real
-// outcome data to calibrate against.
-const MASTERY_DAYS = 21;
-
 // Lookups are surfaced as a phrasebook rather than a history, because a
 // lookup is a phrase you acquired, not an event you did -- and because
 // collapsing five lookups of the same phrase into one row with a count turns
@@ -102,12 +96,22 @@ helpRouter.get(
   "/phrases",
   requireUser,
   asyncHandler(async (req: AuthedRequest, res) => {
-    const events = await prisma.translationAssistEvent.findMany({
-      where: { userId: req.userId!, keyPhrase: { not: "" } },
-      orderBy: { createdAt: "desc" },
-    });
+    const [events, practiceEvents] = await Promise.all([
+      prisma.translationAssistEvent.findMany({
+        where: { userId: req.userId!, keyPhrase: { not: "" } },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.phrasePracticeEvent.findMany({
+        where: { userId: req.userId! },
+        select: { keyPhrase: true },
+      }),
+    ]);
 
-    const masteryCutoff = Date.now() - MASTERY_DAYS * 24 * 60 * 60 * 1000;
+    const practiceCounts = new Map<string, number>();
+    for (const event of practiceEvents) {
+      practiceCounts.set(event.keyPhrase, (practiceCounts.get(event.keyPhrase) ?? 0) + 1);
+    }
+
     const byPhrase = new Map<string, PhraseEntryDTO>();
 
     // Events arrive newest-first, so the first sighting of a phrase is also
@@ -123,7 +127,7 @@ helpRouter.get(
         suggestedText: event.suggestedText,
         lookupCount: 1,
         lastLookedUpAt: event.createdAt.toISOString(),
-        mastered: event.createdAt.getTime() < masteryCutoff,
+        practiceCount: practiceCounts.get(event.keyPhrase) ?? 0,
       });
     }
 
@@ -155,6 +159,29 @@ helpRouter.delete(
       where: { userId: req.userId!, keyPhrase: parsed.data.keyPhrase },
     });
     if (count === 0) return res.status(404).json({ error: "Phrase not found" });
+
+    res.status(204).end();
+  })
+);
+
+const practiceSchema = z.object({
+  keyPhrase: z.string().min(1),
+});
+
+// Fired every time the speaker icon is tapped. Fire-and-forget from the
+// client's perspective -- never blocks audio playback. Logged as an event
+// rather than a bumped counter so a future spaced-repetition reminder has
+// real timestamps ("haven't practiced this in 10 days") to reason about.
+helpRouter.post(
+  "/phrases/practice",
+  requireUser,
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const parsed = practiceSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+    await prisma.phrasePracticeEvent.create({
+      data: { userId: req.userId!, keyPhrase: parsed.data.keyPhrase },
+    });
 
     res.status(204).end();
   })

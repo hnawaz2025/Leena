@@ -122,6 +122,12 @@ export const api = {
       method: "DELETE",
     }),
 
+  logPhrasePractice: (keyPhrase: string) =>
+    request<void>("/help/phrases/practice", {
+      method: "POST",
+      body: JSON.stringify({ keyPhrase }),
+    }),
+
   listScenarios: () => request<import("@leena/shared").ScenarioListItemDTO[]>("/scenarios"),
 
   deleteScenario: (scenarioId: string) =>

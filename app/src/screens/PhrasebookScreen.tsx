@@ -10,24 +10,32 @@ import { EmptyState } from "../components/EmptyState";
 import { SwipeableRow } from "../components/SwipeableRow";
 import type { RootStackParamList } from "../navigation/types";
 import { colors, radius, spacing, typography } from "../theme";
-import { relativeDate } from "../utils/relativeDate";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Phrasebook">;
 
-function PhraseRow({ phrase, onDelete }: { phrase: PhraseEntryDTO; onDelete: () => void }) {
+function PhraseRow({
+  phrase,
+  onDelete,
+  onPractice,
+}: {
+  phrase: PhraseEntryDTO;
+  onDelete: () => void;
+  onPractice: () => void;
+}) {
   return (
     <SwipeableRow onDelete={onDelete} bottomInset={spacing.sm}>
       <Pressable
         style={styles.row}
-        onPress={() => Speech.speak(phrase.suggestedText, { language: "en-US" })}
+        onPress={() => {
+          Speech.speak(phrase.suggestedText, { language: "en-US" });
+          onPractice();
+        }}
       >
         <View style={styles.rowTextGroup}>
           <Text style={styles.phrase}>{phrase.suggestedText}</Text>
-          <Text style={styles.meta}>
-            {phrase.mastered
-              ? `last needed ${relativeDate(phrase.lastLookedUpAt)}`
-              : `looked up ${phrase.lookupCount}×`}
-          </Text>
+          {phrase.practiceCount > 0 ? (
+            <Text style={styles.meta}>practiced {phrase.practiceCount}×</Text>
+          ) : null}
         </View>
         <Volume2 size={18} color={colors.primary} strokeWidth={2} />
       </Pressable>
@@ -35,10 +43,11 @@ function PhraseRow({ phrase, onDelete }: { phrase: PhraseEntryDTO; onDelete: () 
   );
 }
 
-// Everything the user has ever asked how to say, deduplicated by phrase. The
-// two groups are the point: "you've got these" is evidence of progress, which
-// is what actually reduces anxiety, and it's only visible because repeats
-// collapse instead of piling up as a log.
+// Everything the user has ever asked how to say, deduplicated by phrase and
+// sorted by how often they've needed it. No "mastered" split -- a permanent
+// mastery checkmark can't honestly describe how memory actually works, so
+// this is just a flat list with a practice count for the phrases someone
+// chooses to say aloud.
 export function PhrasebookScreen({}: Props) {
   const queryClient = useQueryClient();
   const { data: phrases, isLoading } = useQuery({
@@ -51,6 +60,11 @@ export function PhrasebookScreen({}: Props) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["phrases"] }),
   });
 
+  const practicePhrase = useMutation({
+    mutationFn: api.logPhrasePractice,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["phrases"] }),
+  });
+
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -58,9 +72,6 @@ export function PhrasebookScreen({}: Props) {
       </View>
     );
   }
-
-  const mastered = phrases?.filter((p) => p.mastered) ?? [];
-  const learning = phrases?.filter((p) => !p.mastered) ?? [];
 
   if (!phrases?.length) {
     return (
@@ -75,31 +86,14 @@ export function PhrasebookScreen({}: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {learning.length ? (
-        <>
-          <Text style={styles.sectionTitle}>Still learning · {learning.length}</Text>
-          {learning.map((p) => (
-            <PhraseRow
-              key={p.keyPhrase}
-              phrase={p}
-              onDelete={() => deletePhrase.mutate(p.keyPhrase)}
-            />
-          ))}
-        </>
-      ) : null}
-
-      {mastered.length ? (
-        <>
-          <Text style={styles.sectionTitle}>You've got these · {mastered.length}</Text>
-          {mastered.map((p) => (
-            <PhraseRow
-              key={p.keyPhrase}
-              phrase={p}
-              onDelete={() => deletePhrase.mutate(p.keyPhrase)}
-            />
-          ))}
-        </>
-      ) : null}
+      {phrases.map((p) => (
+        <PhraseRow
+          key={p.keyPhrase}
+          phrase={p}
+          onDelete={() => deletePhrase.mutate(p.keyPhrase)}
+          onPractice={() => practicePhrase.mutate(p.keyPhrase)}
+        />
+      ))}
     </ScrollView>
   );
 }
@@ -113,12 +107,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: spacing.xl,
     backgroundColor: colors.background,
-  },
-  sectionTitle: {
-    ...typography.h2,
-    fontSize: 16,
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
   },
   row: {
     flexDirection: "row",

@@ -18,6 +18,7 @@ model User {
   scenarios               Scenario[]
   sessions                Session[]
   translationAssistEvents TranslationAssistEvent[]
+  phrasePracticeEvents    PhrasePracticeEvent[]
 }
 
 model Document {
@@ -108,8 +109,6 @@ model FeedbackReport {
   session                   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   summary                   String
   summaryNative             String   @default("")
-  struggleAreas             Json
-  struggleAreasNative       Json     @default("[]")
   vocabularySuggestions     Json
   conversationSummary       String   @default("")
   conversationSummaryNative String   @default("")
@@ -117,6 +116,12 @@ model FeedbackReport {
   // per session and append-only; total coverage is derived by unioning across
   // the scenario's reports, which keeps "new this time" recoverable.
   coveredIndices            Json     @default("[]")
+  // Indices into the session's turns (not the checklist). LLM-tagged at
+  // session end: turns that dodged a question, and turns that asked for
+  // repetition or explanation. The second is deliberately kept apart -- asking
+  // for clarification is engagement, and must never be scored as a dodge.
+  nonAnswerTurnIndices      Json     @default("[]")
+  clarificationTurnIndices  Json     @default("[]")
   createdAt                 DateTime @default(now())
 }
 
@@ -163,4 +168,19 @@ model TranslationAssistEvent {
 
   @@index([userId])
   @@index([sessionId])
+}
+
+// Tapping the speaker icon to hear a phrase said aloud. An append-only log,
+// same pattern as TranslationAssistEvent, rather than a mutable counter --
+// the count is derived from it, and the timestamps are what a future
+// spaced-repetition reminder ("haven't practiced this in 10 days") would
+// actually need, not just a total.
+model PhrasePracticeEvent {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyPhrase String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
