@@ -214,6 +214,14 @@ Notes on the parts whose shape isn't obvious:
 Home lists Scenarios, not Sessions — otherwise repeated practice would look
 like duplicate history.
 
+**`Scenario.openingLine`** is spoken as the first agent turn of every session,
+written at session creation. Real versions of these conversations open with
+the other party talking — a receptionist greets you, a landlord picks up — so
+starting on a blank screen would put the burden of opening on the person least
+equipped to carry it. It's a column rather than text appended to
+`contextSummary` because prose glued into a blob can only be recovered with a
+regex, which is exactly what the app used to do.
+
 **`Scenario.checklist`** is generated once, lazily, at the first session end,
 and is immutable thereafter. Coverage accumulates across attempts, and it can
 only do that against a target that doesn't move between them.
@@ -453,8 +461,3 @@ tracked here so the next person doesn't have to rediscover them.
   backward-compatible.
 - **Band thresholds are invented.** The 40/70 and 40/75 cutoffs that turn a
   number into a judgement were picked, not derived from any distribution.
-- **`contextSummary` flattens structured data into a string.** `scenarios.ts`
-  glues the summary, opening line and key vocabulary into one blob, so the app
-  has to un-glue it with a regex, `keyVocabulary` is unusable as data, and
-  **`openingLine` is never spoken** — which is why the persona never opens a
-  conversation.

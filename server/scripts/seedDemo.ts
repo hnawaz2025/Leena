@@ -382,6 +382,10 @@ async function main() {
         situationType: DEMO_MARKER,
         personaDescription: spec.persona,
         contextSummary: `Practice conversation with ${spec.persona}.`,
+        // Derived rather than declared: the first thing the persona says in
+        // the seeded transcript is by definition how it opens, and keeping
+        // one source means they can't drift apart.
+        openingLine: spec.sessions[0]?.exchanges[0]?.agent ?? "",
         language: user.targetLanguage,
         checklist: spec.checklist.map(([en, translations]) => ({
           en,

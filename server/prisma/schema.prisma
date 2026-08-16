@@ -54,6 +54,14 @@ model Scenario {
   situationType      String    @default("")
   personaDescription String
   contextSummary     String
+  // What the persona says to open the conversation. Stored as its own column
+  // rather than appended to contextSummary: it needs to be spoken as the
+  // first agent turn of every session, and text glued into a prose blob can
+  // only be recovered with a regex -- which is what the app used to do.
+  openingLine        String    @default("")
+  // Words worth knowing for this conversation, as a string[]. Passed to the
+  // persona so it actually uses them, rather than being decoration.
+  keyVocabulary      Json      @default("[]")
   language           String
   // The things this conversation demands, as [{ en, native }]. Generated once
   // at the first session end and never rewritten -- coverage can only

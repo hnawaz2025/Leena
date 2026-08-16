@@ -80,6 +80,25 @@ sessionsRouter.post(
       data: { userId: req.userId!, scenarioId: scenario.id },
     });
 
+    // The persona speaks first. Real versions of these conversations open with
+    // the other party talking -- a receptionist greets you, a landlord picks
+    // up the phone -- and starting on a blank screen puts the burden of
+    // opening on the person least equipped to carry it.
+    //
+    // Written on every attempt, not just the first: each session is its own
+    // conversation and needs its own opening. Guarded because scenarios
+    // created before openingLine existed have an empty string.
+    if (scenario.openingLine.trim()) {
+      await prisma.turn.create({
+        data: {
+          sessionId: session.id,
+          speaker: "agent",
+          text: scenario.openingLine,
+          language: scenario.language,
+        },
+      });
+    }
+
     res.status(201).json(sessionToDTO({ ...session, scenario }));
   })
 );
@@ -142,6 +161,7 @@ sessionsRouter.post(
       targetLanguage: session.scenario.language,
       history: session.turns.map((t) => ({ speaker: t.speaker as "user" | "agent", text: t.text })),
       userText: parsed.data.text,
+      keyVocabulary: (session.scenario.keyVocabulary as string[] | null) ?? undefined,
       focusItems,
     });
 

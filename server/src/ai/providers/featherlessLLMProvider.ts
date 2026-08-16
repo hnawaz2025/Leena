@@ -90,9 +90,13 @@ Where it fits naturally, steer the conversation so they get a chance to. Never m
 instruction, never list these out, and never break character to coach them.`
       : "";
 
+    const vocabularyNote = input.keyVocabulary?.length
+      ? `\nVocabulary this conversation naturally involves: ${input.keyVocabulary.join(", ")}. Use it where it fits; never list it out or explain it.`
+      : "";
+
     const systemPrompt = `You are roleplaying as: ${input.personaDescription}.
 Context: ${input.contextSummary}
-Speak only in ${input.targetLanguage}. Stay in character. Keep responses short and natural, like real spoken conversation.${focusNote}`;
+Speak only in ${input.targetLanguage}. Stay in character. Keep responses short and natural, like real spoken conversation.${vocabularyNote}${focusNote}`;
 
     const recentHistory = input.history.slice(-MAX_HISTORY_TURNS_FOR_CHAT);
 

@@ -10,6 +10,10 @@ export interface ScenarioDTO {
   situationType: string;
   personaDescription: string;
   contextSummary: string;
+  // Spoken by the persona as the first turn of every session, so the user is
+  // answering someone rather than facing a blank screen.
+  openingLine: string;
+  keyVocabulary: string[];
   language: Language;
   documentId: string | null;
   createdAt: string;

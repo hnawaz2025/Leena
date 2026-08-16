@@ -28,6 +28,8 @@ function toDTO(scenario: {
   situationType: string;
   personaDescription: string;
   contextSummary: string;
+  openingLine: string;
+  keyVocabulary: unknown;
   language: string;
   documentId: string | null;
   createdAt: Date;
@@ -38,6 +40,8 @@ function toDTO(scenario: {
     situationType: scenario.situationType,
     personaDescription: scenario.personaDescription,
     contextSummary: scenario.contextSummary,
+    openingLine: scenario.openingLine,
+    keyVocabulary: (scenario.keyVocabulary as string[] | null) ?? [],
     language: scenario.language,
     documentId: scenario.documentId,
     createdAt: scenario.createdAt.toISOString(),
@@ -78,7 +82,9 @@ scenariosRouter.post(
         title: generated.title,
         situationType: parsed.data.situationType,
         personaDescription: generated.personaDescription,
-        contextSummary: `${generated.contextSummary}\n\nOpening line: ${generated.openingLine}\nKey vocabulary: ${generated.keyVocabulary.join(", ")}`,
+        contextSummary: generated.contextSummary,
+        openingLine: generated.openingLine,
+        keyVocabulary: generated.keyVocabulary,
         language: user.targetLanguage,
       },
     });

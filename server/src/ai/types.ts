@@ -32,6 +32,10 @@ export interface ChatTurnInput {
   targetLanguage: string;
   history: { speaker: "user" | "agent"; text: string }[];
   userText: string;
+  // Words this conversation is expected to involve. Used to keep the persona
+  // speaking the vocabulary the learner is preparing for -- it previously
+  // reached the model only by accident, glued onto the end of contextSummary.
+  keyVocabulary?: string[];
   // Checklist items the user hasn't handled yet. The persona is asked to
   // steer toward these, so a repeat attempt explores the gaps instead of
   // replaying the same conversation.

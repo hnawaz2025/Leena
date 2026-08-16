@@ -22,11 +22,7 @@ export function ScenarioInfoModal({ visible, scenario, onClose }: ScenarioInfoMo
     enabled: visible && !!scenario.documentId,
   });
 
-  // contextSummary is stored with an "Opening line" / "Key vocabulary"
-  // appendix (see scenarios.ts) that helps the AI stay in character -- useful
-  // for chatTurn, but not something the immigrant actually provided, so it's
-  // stripped here for display.
-  const context = scenario.contextSummary.split(/\n\nOpening line:/)[0];
+  const context = scenario.contextSummary;
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent>
