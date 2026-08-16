@@ -285,6 +285,33 @@ characters from unrelated scripts into output meant to be in another language
 (first seen as Cyrillic inside otherwise-correct Spanish). It is a targeted
 check for exactly that, not a translation-quality check.
 
+### Timeouts and retries
+
+The OpenAI SDK — which both providers use, since Featherless is
+OpenAI-compatible — defaults to a **ten-minute** timeout and two retries. Left
+alone that lets one stuck call hold a request open for half an hour, and it's
+what made a dead Whisper call appear to hang. Both are set explicitly:
+
+| Client | Timeout | Retries | Worst case |
+| --- | --- | --- | --- |
+| Featherless (LLM) | 90s | 1 | ~3 min |
+| OpenAI (Whisper) | 45s | 2 | ~2¼ min |
+
+Transcription gets the larger retry budget on purpose: a failure there loses
+audio the user already spoke, and the only recovery is asking them to repeat
+themselves — the exact thing this app exists to make less daunting. LLM
+timeouts are sized off the slowest measured call (`analyzeSession`, ~29s).
+
+Retries are left to the SDK rather than hand-rolled. It backs off properly and
+already limits itself to transient failures (408, 409, 429, 5xx, connection
+errors), and correctly refuses to retry auth and quota errors.
+
+`callForJson`'s own retry sits *on top* of that and does a different job:
+correcting a badly-shaped response. It now stops early on transport errors,
+because re-asking with a note about JSON formatting can't fix a 401, a wrong
+model id, or a provider at capacity — it only doubles how long the user waits
+to be told it failed.
+
 ### Truncation limits
 
 All in `featherlessLLMProvider.ts`, all there to stop prompt size and cost
@@ -451,14 +478,10 @@ tracked here so the next person doesn't have to rediscover them.
 - **No graceful shutdown.** SIGTERM on redeploy kills in-flight requests, which
   matters more here than usual because AI calls routinely run 30–90s.
 - **`/health` leaks the raw DB error string.**
-- **No timeouts on AI calls.** SDK defaults are up to 10 minutes.
 - **No token/cost logging.** Usage data is returned by every call and discarded.
 
 **Correctness**
 
-- **`transcribe` has no retry**, while LLM calls get two attempts — and a
-  failed transcription means the user's audio is gone and they must speak
-  again. Worst place in the app to lack one.
 - **Script contamination checks are applied unevenly.** `suggestPhrase` treats
   a leak as a *hard* failure (so the user gets a 500 instead of a slightly
   imperfect phrase) while everywhere else it's soft; `generateScenario` and

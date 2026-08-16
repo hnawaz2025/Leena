@@ -9,6 +9,18 @@ import type { z } from "zod";
 // after a specific mistake (e.g. an out-of-range index) had nothing to go on
 // and would often make the exact same mistake again. Now built per-attempt
 // from the actual error, so the model sees what it needs to fix.
+// Distinguishes "the model answered badly" from "there was no answer". The
+// OpenAI SDK (which both providers use) attaches a numeric `status` to
+// anything that came back from the wire, and an APIConnectionError for
+// failures that never got that far -- neither of which a reworded prompt can
+// do anything about.
+function isTransportError(error: unknown): boolean {
+  if (error === null || typeof error !== "object") return false;
+  const candidate = error as { status?: unknown; name?: unknown };
+  if (typeof candidate.status === "number") return true;
+  return typeof candidate.name === "string" && /^API(Connection|UserAbort)/.test(candidate.name);
+}
+
 function buildCorrectionNote(error: unknown): string {
   const detail = error instanceof Error ? error.message : String(error);
   return `Your previous response had this problem: ${detail}. Return ONLY a single valid JSON object that fixes this, with no prose before or after it, and no markdown code fences.`;
@@ -87,6 +99,14 @@ export async function callForJson<T>(
       return parsed;
     } catch (error) {
       lastError = error;
+
+      // This retry exists to correct a badly-shaped *response*. If the model
+      // never produced one -- auth rejected, out of quota, model id wrong,
+      // provider at capacity -- then re-asking with a note about JSON
+      // formatting is asking the wrong question, and only doubles how long
+      // the user waits to be told it failed. The SDK has already retried the
+      // transient ones with proper backoff by this point.
+      if (isTransportError(error)) break;
     }
   }
 

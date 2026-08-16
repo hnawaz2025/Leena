@@ -49,12 +49,30 @@ const VISION_MODEL = "Qwen/Qwen3-VL-8B-Instruct";
 // larger models consume more of the plan's limited concurrent request units
 // -- check the model's page on Featherless's dashboard before picking one for
 // a live demo.
+// The SDK defaults to a ten-minute timeout and two retries, so a stuck call
+// could occupy a request for half an hour. These are sized off measured
+// behaviour instead: the slowest call in the app is analyzeSession at ~29s,
+// so 90s is roughly 3x headroom, and one retry bounds the worst case near
+// 3 minutes rather than 30.
+//
+// Retries are left to the SDK rather than hand-rolled: it already backs off
+// and already limits itself to genuinely transient failures (408, 409, 429,
+// 5xx, connection errors), and notably does NOT retry auth or quota errors,
+// which can never succeed on a second attempt.
+const LLM_TIMEOUT_MS = 90_000;
+const LLM_MAX_RETRIES = 1;
+
 export class FeatherlessLLMProvider implements LLMProvider {
   private client: OpenAI;
   private model: string;
 
   constructor(apiKey: string, model: string) {
-    this.client = new OpenAI({ apiKey, baseURL: "https://api.featherless.ai/v1" });
+    this.client = new OpenAI({
+      apiKey,
+      baseURL: "https://api.featherless.ai/v1",
+      timeout: LLM_TIMEOUT_MS,
+      maxRetries: LLM_MAX_RETRIES,
+    });
     this.model = model;
   }
 
