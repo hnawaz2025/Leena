@@ -45,6 +45,18 @@ const MIN_WORDS_FOR_UNAIDED_TURN = 8;
 const MAX_STRUGGLE_PHRASES = 3;
 const MAX_NON_ANSWER_MOMENTS = 3;
 
+// A dodge is either "I didn't follow the question" (the fix is asking them to
+// repeat or rephrase) or "I understood but don't have the answer" (repeating
+// the question back wouldn't help at all -- these need a different rescue
+// phrase). Not something worth a model call to tell apart: the second kind is
+// nearly always a small, closed set of stock phrases.
+const UNSURE_REPLY_PATTERN =
+  /\b(i(?:'m| am)? ?(?:not sure|don'?t know|no idea|dunno)|not certain|i (?:can'?t|cannot) (?:remember|recall))\b/i;
+
+function classifyNonAnswer(reply: string): "unclear" | "unsure" {
+  return UNSURE_REPLY_PATTERN.test(reply) ? "unsure" : "unclear";
+}
+
 function bandFor(value: number): MetricBand {
   if (value < BAND_LOW) return "low";
   if (value < BAND_HIGH) return "mid";
@@ -93,7 +105,7 @@ function computeEvidence(sessions: SessionForMetrics[]): IndependenceEvidenceDTO
   const counts = new Map<string, number>();
   let helpRequestCount = 0;
   let clarificationCount = 0;
-  const nonAnswerMoments: { question: string; reply: string }[] = [];
+  const nonAnswerMoments: { question: string; reply: string; kind: "unclear" | "unsure" }[] = [];
 
   for (const session of sessions) {
     helpRequestCount += session.helpEvents.length;
@@ -109,9 +121,11 @@ function computeEvidence(sessions: SessionForMetrics[]): IndependenceEvidenceDTO
       if (!turn || turn.speaker !== "user") continue;
       // The persona line immediately before is what they dodged.
       const prompt = session.turns[index - 1];
+      const reply = turn.text.trim();
       nonAnswerMoments.push({
         question: prompt?.speaker === "agent" ? prompt.text.trim() : "",
-        reply: turn.text.trim(),
+        reply,
+        kind: classifyNonAnswer(reply),
       });
     }
   }

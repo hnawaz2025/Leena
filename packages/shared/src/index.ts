@@ -119,8 +119,12 @@ export interface IndependenceEvidenceDTO {
   // Times they asked someone to repeat or explain. Shown as a win, not a
   // failure: it's the behaviour the app exists to build.
   clarificationCount: number;
-  // Moments where a question got a dodge instead of an answer, quoted verbatim.
-  nonAnswerMoments: { question: string; reply: string }[];
+  // Moments where a question got a dodge instead of an answer, quoted
+  // verbatim. "kind" distinguishes not following the question ("could you
+  // say that again?" is the right rescue) from understanding it but not
+  // having the answer ("I'm not sure" needs a different rescue entirely --
+  // repeating the question back wouldn't have helped).
+  nonAnswerMoments: { question: string; reply: string; kind: "unclear" | "unsure" }[];
 }
 
 export interface CoverageEvidenceDTO {

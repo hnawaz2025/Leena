@@ -5,8 +5,14 @@ import type { z } from "zod";
 // validates it against the given schema, and retries once with an explicit
 // correction instruction before giving up.
 
-export const JSON_CORRECTION_NOTE =
-  "Your previous response could not be parsed as valid JSON matching the required shape. Return ONLY a single valid JSON object, with no prose before or after it, and no markdown code fences.";
+// Told the model only that something was wrong, never what -- so a retry
+// after a specific mistake (e.g. an out-of-range index) had nothing to go on
+// and would often make the exact same mistake again. Now built per-attempt
+// from the actual error, so the model sees what it needs to fix.
+function buildCorrectionNote(error: unknown): string {
+  const detail = error instanceof Error ? error.message : String(error);
+  return `Your previous response had this problem: ${detail}. Return ONLY a single valid JSON object that fixes this, with no prose before or after it, and no markdown code fences.`;
+}
 
 function extractJsonBlock(raw: string): string {
   const match = raw.match(/\{[\s\S]*\}/);
@@ -59,7 +65,7 @@ export async function callForJson<T>(
   const lastAttempt = 1;
 
   for (let attempt = 0; attempt <= lastAttempt; attempt++) {
-    const correctionNote = attempt === 0 ? undefined : JSON_CORRECTION_NOTE;
+    const correctionNote = attempt === 0 ? undefined : buildCorrectionNote(lastError);
     try {
       const text = await callModel(correctionNote);
       const parsed = schema.parse(JSON.parse(extractJsonBlock(text)));

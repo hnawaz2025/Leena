@@ -202,26 +202,27 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
         return response.choices[0]?.message?.content ?? "";
       },
       (parsed) => {
-        // An out-of-range index would silently tick a checklist item that
-        // doesn't exist, so reject rather than filter -- a wrong tick is
-        // worse than a missing one.
+        // An out-of-range index doesn't correspond to any real checklist item
+        // or turn, so it can't wrongly tick one -- dropping it is safe, and
+        // far cheaper than discarding an otherwise-good report over one bad
+        // number. Smaller instruct models (seen with Qwen2.5-7B after
+        // Featherless's GLM-4-9B hit capacity) occasionally miscount despite
+        // an explicit "numbered from 0" instruction, even across a retry that
+        // names the exact bad index -- so this can't be fully prompted away.
         const checklistLength = input.checklist?.length ?? 0;
-        const badIndex = parsed.coveredIndices.find((i) => i >= checklistLength);
-        if (badIndex !== undefined) {
-          throw new Error(
-            `coveredIndices contains ${badIndex}, outside the ${checklistLength}-item checklist`
+        const before = parsed.coveredIndices.length;
+        parsed.coveredIndices = parsed.coveredIndices.filter((i) => i < checklistLength);
+        if (parsed.coveredIndices.length !== before) {
+          console.warn(
+            `analyzeSession: dropped ${before - parsed.coveredIndices.length} out-of-range coveredIndices (checklist has ${checklistLength} items)`
           );
         }
-        // Same reasoning for turn indices: pointing at a turn that isn't there
-        // would attribute a non-answer to the wrong sentence.
-        for (const [name, indices] of [
-          ["nonAnswerTurnIndices", parsed.nonAnswerTurnIndices],
-          ["clarificationTurnIndices", parsed.clarificationTurnIndices],
-        ] as const) {
-          const bad = indices.find((i) => i >= recentTranscript.length);
-          if (bad !== undefined) {
-            throw new Error(
-              `${name} contains ${bad}, outside the ${recentTranscript.length}-turn transcript`
+        for (const key of ["nonAnswerTurnIndices", "clarificationTurnIndices"] as const) {
+          const beforeLen = parsed[key].length;
+          parsed[key] = parsed[key].filter((i) => i < recentTranscript.length);
+          if (parsed[key].length !== beforeLen) {
+            console.warn(
+              `analyzeSession: dropped ${beforeLen - parsed[key].length} out-of-range ${key} (transcript has ${recentTranscript.length} turns)`
             );
           }
         }

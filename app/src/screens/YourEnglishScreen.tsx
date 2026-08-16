@@ -20,9 +20,19 @@ import { colors, radius, spacing, typography } from "../theme";
 
 type Props = NativeStackScreenProps<RootStackParamList, "YourEnglish">;
 
-// One phrase covers every instance of not following what was said, so it's
-// fixed rather than generated -- nothing here needs a model call.
-const RESCUE_PHRASE = "Sorry, could you say that again?";
+// Two different rescues for two different problems -- "could you say that
+// again" only makes sense when the question itself wasn't followed. When it
+// was understood but there's no answer to give, repeating the question back
+// helps nothing; the honest move is to say so and ask for a moment or an
+// example instead.
+const RESCUE_PHRASES: Record<"unclear" | "unsure", string> = {
+  unclear: "Sorry, could you say that again?",
+  unsure: "I'm not sure — could you give me an example?",
+};
+const NON_ANSWER_TITLES: Record<"unclear" | "unsure", string> = {
+  unclear: "When you didn't understand",
+  unsure: "When you didn't have an answer",
+};
 
 const HERO_RING_SIZE = 168;
 
@@ -102,30 +112,33 @@ function IndependenceDetail({ metric }: { metric: MetricDTO<IndependenceEvidence
       ) : null}
 
       {nonAnswerMoments.length ? (
-        nonAnswerMoments.map((m, i) => (
-          <View key={i} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <MessageCircleQuestion size={14} color={colors.warning} strokeWidth={2.5} />
-              <Text style={styles.cardLabel}>When you didn't understand</Text>
+        nonAnswerMoments.map((m, i) => {
+          const rescuePhrase = RESCUE_PHRASES[m.kind];
+          return (
+            <View key={i} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <MessageCircleQuestion size={14} color={colors.warning} strokeWidth={2.5} />
+                <Text style={styles.cardLabel}>{NON_ANSWER_TITLES[m.kind]}</Text>
+              </View>
+              {m.question ? (
+                <>
+                  <Text style={styles.exchangeSpeaker}>They asked</Text>
+                  <Text style={styles.quote}>"{m.question}"</Text>
+                </>
+              ) : null}
+              <Text style={styles.exchangeSpeaker}>You said</Text>
+              <Text style={styles.quote}>"{m.reply}"</Text>
+              <Text style={styles.tryLine}>Try: "{rescuePhrase}"</Text>
+              <Pressable
+                style={styles.speakRow}
+                onPress={() => Speech.speak(rescuePhrase, { language: "en-US" })}
+              >
+                <Volume2 size={18} color={colors.primary} strokeWidth={2} />
+                <Text style={styles.speakText}>Hear it</Text>
+              </Pressable>
             </View>
-            {m.question ? (
-              <>
-                <Text style={styles.exchangeSpeaker}>They asked</Text>
-                <Text style={styles.quote}>"{m.question}"</Text>
-              </>
-            ) : null}
-            <Text style={styles.exchangeSpeaker}>You said</Text>
-            <Text style={styles.quote}>"{m.reply}"</Text>
-            <Text style={styles.tryLine}>Try: "{RESCUE_PHRASE}"</Text>
-            <Pressable
-              style={styles.speakRow}
-              onPress={() => Speech.speak(RESCUE_PHRASE, { language: "en-US" })}
-            >
-              <Volume2 size={18} color={colors.primary} strokeWidth={2} />
-              <Text style={styles.speakText}>Hear it</Text>
-            </Pressable>
-          </View>
-        ))
+          );
+        })
       ) : null}
 
       {strugglePhrases.length ? (
