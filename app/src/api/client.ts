@@ -4,6 +4,32 @@ import { getAuthToken, getOrCreateDeviceId, setAuthToken } from "./deviceId";
 // physical device via Expo Go, e.g. http://192.168.1.23:4000
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
+// Whatever this returns is what the user reads. The server already decides
+// what is safe and sensible to show (see server/src/errors.ts), so the job
+// here is to surface that message rather than wrap it in HTTP noise --
+// stringifying the whole response is how "500 Internal Server Error:
+// {"error":"...GLM-4-9B-0414 is temporarily at capacity"}" ended up on screen.
+async function errorMessageFrom(response: Response): Promise<string> {
+  const fallback = "Something went wrong. Please try again.";
+  try {
+    const body = await response.json();
+    if (typeof body?.error === "string") return body.error;
+    // Zod's flatten() shape -- surface the first field error, which is the
+    // only part a person can act on.
+    const fieldErrors = body?.error?.fieldErrors as Record<string, string[]> | undefined;
+    const firstField = fieldErrors && Object.values(fieldErrors).flat()[0];
+    if (typeof firstField === "string") return firstField;
+    const formErrors = body?.error?.formErrors as string[] | undefined;
+    if (formErrors?.length) return formErrors[0];
+    return fallback;
+  } catch {
+    // Non-JSON body: a proxy error page, or the server being unreachable.
+    return response.status >= 500
+      ? "The server isn't responding right now. Please try again."
+      : fallback;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const deviceId = await getOrCreateDeviceId();
   const authToken = await getAuthToken();
@@ -19,8 +45,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`${response.status} ${response.statusText}: ${body}`);
+    throw new Error(await errorMessageFrom(response));
   }
 
   if (response.status === 204) return undefined as T;

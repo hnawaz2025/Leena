@@ -302,6 +302,39 @@ scratchpad into the output.
 
 ---
 
+## Errors
+
+One rule, in [`src/errors.ts`](src/errors.ts): **a message reaches the user
+only if someone deliberately wrote it for them.** Everything else is logged in
+full server-side and replaced.
+
+This isn't hypothetical tidiness. Returning `err.message` verbatim is how a
+user practising English was once shown
+`500 Internal Server Error: {"error":"AI response did not match the expected
+shape after retry: 503 zai-org/GLM-4-9B-0414 is temporarily at capacity"}` —
+alarming, useless, and leaking the model id.
+
+| Thrown | Client gets |
+| --- | --- |
+| `ZodError` | 400 + field errors (our own validation of their input — safe and actionable) |
+| `AppError` | its own status + message verbatim (written for the user on purpose) |
+| Provider 429/503/capacity | 503 `AI_UNAVAILABLE` — "busy right now, try again in a moment" |
+| Provider quota/billing | 503 `AI_QUOTA_EXHAUSTED` — same tone, distinct code for alerting |
+| Timeout / connection reset | 504 `AI_TIMEOUT` |
+| Provider 401/403, DB errors, bugs | 500 `INTERNAL_ERROR`, generic |
+
+Provider auth failures deliberately fall through to the generic case: a bad
+API key is our bug, not something the user can act on, and the detail belongs
+only in the logs.
+
+Classification walks the `cause` chain, because `callForJson` re-throws with
+context — flattening the original error into a string would discard the status
+code the whole decision rests on.
+
+The client half matters just as much: `app/src/api/client.ts` parses the JSON
+body and surfaces `error`, rather than stringifying the whole response into
+HTTP noise.
+
 ## The metrics layer
 
 Two metrics, both computed fresh on every `GET /metrics` from rows already
@@ -383,10 +416,6 @@ tracked here so the next person doesn't have to rediscover them.
 
 - **Rate-limit counters are in-memory** — they reset on deploy and don't span
   instances. Fine for one dyno; needs `rate-limit-redis` beyond that.
-- **Raw error messages reach the client.** `errorHandler` returns
-  `err.message` verbatim, which is how provider strings like
-  `"503 … is temporarily at capacity"` end up in the UI. Should log the real
-  error and return a generic message plus a small map of known-safe cases.
 - **`cors()` is unconfigured** — every origin allowed.
 - **No graceful shutdown.** SIGTERM on redeploy kills in-flight requests, which
   matters more here than usual because AI calls routinely run 30–90s.

@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { AppError } from "../../errors";
 import { assertNoUnexpectedScript, callForJson } from "../jsonRetry";
 import {
   analyzeSessionResultSchema,
@@ -295,7 +296,12 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
 
     const text = response.choices[0]?.message?.content ?? "";
     if (!text.trim()) {
-      throw new Error("Couldn't read any text in that photo. Try a clearer, well-lit picture.");
+      // Written for the user and actionable by them, so it's an AppError and
+      // survives errorHandler's genericisation.
+      throw new AppError("Couldn't read any text in that photo. Try a clearer, well-lit picture.", {
+        statusCode: 422,
+        code: "NO_TEXT_IN_IMAGE",
+      });
     }
     return { text: text.trim() };
   }
