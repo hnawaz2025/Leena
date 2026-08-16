@@ -14,6 +14,7 @@ import { getLLMProvider, getSpeechProvider } from "./ai";
 import { prisma } from "./db";
 import { loadEnv } from "./env";
 import { errorHandler } from "./middleware/errorHandler";
+import { aiRateLimiter, readRateLimiter } from "./middleware/rateLimit";
 import { documentsRouter } from "./routes/documents";
 import { helpRouter } from "./routes/help";
 import { metricsRouter } from "./routes/metrics";
@@ -30,6 +31,14 @@ getLLMProvider();
 getSpeechProvider();
 
 const app = express();
+
+// Render (and most PaaS) put a proxy in front of the app, so req.ip would
+// otherwise be the proxy's address for every caller -- collapsing all users
+// into one rate-limit bucket. Trusting exactly one hop rather than `true` is
+// deliberate: blanket trust lets a client forge X-Forwarded-For and pick its
+// own bucket, which would defeat the IP limit on account creation.
+app.set("trust proxy", 1);
+
 app.use(cors());
 app.use(morgan("dev"));
 // Voice recordings and document photos arrive as base64 JSON, which inflates
@@ -45,13 +54,17 @@ app.get("/health", async (_req, res) => {
   }
 });
 
+// Limiters are mounted per-router by how expensive the router is, not
+// globally: metrics is a pure read and should never be throttled at the same
+// rate as a router that bills per request. /health stays unlimited so an
+// uptime check can never be rate-limited into looking like an outage.
 app.use("/users", usersRouter);
-app.use("/documents", documentsRouter);
-app.use("/scenarios", scenariosRouter);
-app.use("/sessions", sessionsRouter);
-app.use("/help", helpRouter);
-app.use("/metrics", metricsRouter);
-app.use("/speech", speechRouter);
+app.use("/documents", aiRateLimiter, documentsRouter);
+app.use("/scenarios", aiRateLimiter, scenariosRouter);
+app.use("/sessions", aiRateLimiter, sessionsRouter);
+app.use("/help", aiRateLimiter, helpRouter);
+app.use("/speech", aiRateLimiter, speechRouter);
+app.use("/metrics", readRateLimiter, metricsRouter);
 
 app.use(errorHandler);
 

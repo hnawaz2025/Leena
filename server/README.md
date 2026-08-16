@@ -126,6 +126,33 @@ The tradeoff, stated plainly: identity is bound to a device install. There is
 no account recovery and no multi-device sync. That's the right call for a
 hackathon MVP and the wrong one for a real product.
 
+### Rate limiting
+
+Nearly every route here spends money, so limits are mounted per-router by cost
+([`middleware/rateLimit.ts`](src/middleware/rateLimit.ts)):
+
+| Scope | Limit | Keyed by |
+| --- | --- | --- |
+| AI routes (documents, scenarios, sessions, help, speech) | 120 / 15 min | account |
+| `/metrics` | 600 / 15 min | account |
+| `POST /users/identify` | 30 / hour | IP |
+| `/health` | unlimited | — |
+
+The two layers work together. Keying expensive routes on the account would be
+weak alone, since `x-device-id` is a spoofable header — but a rotated device
+id has no valid auth token, and getting one means going through account
+creation, which is limited per IP.
+
+120 per window is about four full conversations (a conversation runs ~27 model
+calls), which no real user reaches by accident.
+
+`app.set("trust proxy", 1)` in `index.ts` is what makes IP keying work behind
+Render's proxy. It trusts exactly one hop rather than `true`, because blanket
+trust would let a client forge `X-Forwarded-For` and choose its own bucket.
+
+**Limitation:** counters are in-memory. They reset on deploy and are per-instance,
+so horizontal scaling needs a shared store (`rate-limit-redis`).
+
 ---
 
 ## Directory map
@@ -319,7 +346,7 @@ and `POST /users/identify`.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | liveness + DB reachability |
-| `POST` | `/users/identify` | upsert by deviceId, mint auth token |
+| `POST` | `/users/identify` | upsert by deviceId, mint auth token; IP rate-limited |
 | `POST` | `/documents` | store already-extracted text |
 | `GET` | `/documents/:id` | read one |
 | `POST` | `/documents/extract-from-image` | photo → text (vision model) |
@@ -354,10 +381,8 @@ tracked here so the next person doesn't have to rediscover them.
 
 **Operational**
 
-- **No rate limiting.** `POST /users/identify` is necessarily unauthenticated,
-  and nothing throttles what follows. Anyone can mint a token and loop the
-  paid endpoints. This is the highest-priority gap the moment the API is
-  publicly reachable.
+- **Rate-limit counters are in-memory** — they reset on deploy and don't span
+  instances. Fine for one dyno; needs `rate-limit-redis` beyond that.
 - **Raw error messages reach the client.** `errorHandler` returns
   `err.message` verbatim, which is how provider strings like
   `"503 … is temporarily at capacity"` end up in the UI. Should log the real
