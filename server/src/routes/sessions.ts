@@ -208,9 +208,28 @@ sessionsRouter.post(
     });
     if (!session) return res.status(404).json({ error: "Session not found" });
 
+    // Ending is idempotent, and the guard is on the *work* rather than on
+    // status. A plain `status !== "active"` check would be wrong in both
+    // directions: it would 400 a harmless double-tap, and -- worse -- it would
+    // permanently strand any session whose analysis threw after the status was
+    // already flipped, since the retry that recovers it is also a second call.
+    //
+    // So: already has a report means the work is genuinely done, return it and
+    // don't pay for the model again. Completed with no report means the last
+    // attempt died partway, and this call is the retry.
+    const existingReport = await prisma.feedbackReport.findUnique({
+      where: { sessionId: session.id },
+      select: { id: true },
+    });
+    if (session.status !== "active" && existingReport) {
+      return res.json(sessionToDTO(session));
+    }
+
+    // Flipped before the analysis, not after, so no further turns can be
+    // appended to a transcript that's already being analysed.
     const updated = await prisma.session.update({
       where: { id: session.id },
-      data: { status: "completed", endedAt: new Date() },
+      data: { status: "completed", endedAt: session.endedAt ?? new Date() },
     });
 
     // Generated lazily on the first attempt only: it keeps scenario creation

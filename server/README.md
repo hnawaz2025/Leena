@@ -310,6 +310,29 @@ scratchpad into the output.
 
 ---
 
+## Session lifecycle
+
+Two guarantees in `routes/sessions.ts` that are easy to break by accident:
+
+**A turn is written only once the reply exists.** `POST /:id/turns` calls the
+model *before* writing anything, then commits both turns in one transaction.
+Writing the user's turn first would strand it in the transcript with nothing
+answering it whenever the model call failed. The transaction deliberately does
+not wrap the AI call — those run 2–30s, and holding a Postgres transaction
+open that long pins a pooled connection and holds locks with it.
+
+Timestamps in that transaction are set explicitly, because Postgres resolves
+`CURRENT_TIMESTAMP` to the *transaction start time*: left to
+`@default(now())`, both rows would share an instant and `orderBy: createdAt`
+could render the reply above the message it answers.
+
+**Ending is idempotent, and guarded on work rather than status.** `POST
+/:id/end` returns early only when the session is finished *and* already has a
+feedback report. A plain `status !== "active"` check would be wrong twice
+over: it would reject a harmless double-tap, and it would permanently strand
+any session whose analysis threw after the status flag had already flipped —
+because the retry that recovers it is also a second call.
+
 ## Errors
 
 One rule, in [`src/errors.ts`](src/errors.ts): **a message reaches the user
@@ -433,11 +456,6 @@ tracked here so the next person doesn't have to rediscover them.
 
 **Correctness**
 
-- **A failed AI call can leave an orphaned turn.** `POST /:id/turns` writes the
-  user's turn, then calls the model, then writes the reply — with no
-  transaction. On failure the user's message is committed with no response.
-- **`POST /:id/end` has no active-session guard**, unlike the turns route.
-  Calling it twice re-runs the paid analysis and overwrites the report.
 - **`transcribe` has no retry**, while LLM calls get two attempts — and a
   failed transcription means the user's audio is gone and they must speak
   again. Worst place in the app to lack one.
