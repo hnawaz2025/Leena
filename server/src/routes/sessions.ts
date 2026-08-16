@@ -126,16 +126,6 @@ sessionsRouter.post(
     if (!session) return res.status(404).json({ error: "Session not found" });
     if (session.status !== "active") return res.status(400).json({ error: "Session is not active" });
 
-    const userTurn = await prisma.turn.create({
-      data: {
-        sessionId: session.id,
-        speaker: "user",
-        text: parsed.data.text,
-        language: parsed.data.language,
-        fromSuggestion: parsed.data.fromSuggestion,
-      },
-    });
-
     // Nudge the persona toward whatever this scenario still hasn't exercised,
     // so a repeat attempt explores the gaps instead of replaying the same
     // conversation. Derived from prior attempts each turn, so it needs no
@@ -152,6 +142,17 @@ sessionsRouter.post(
       if (remaining.length) focusItems = remaining;
     }
 
+    // The model call happens BEFORE anything is written. Previously the user's
+    // turn was saved first, so a failed AI call left it stranded in the
+    // transcript with no reply -- and retrying saved it a second time.
+    //
+    // Note this is deliberately not a transaction wrapped around the AI call:
+    // these run 2-30s, and holding a Postgres transaction open that long would
+    // pin a pooled connection and take locks with it. Calling first and then
+    // writing atomically gets the same guarantee without that cost. chatTurn
+    // takes userText separately from history, so it doesn't need the turn to
+    // be persisted to work.
+    //
     // chatTurn internally caps how much of this history it actually sends to
     // the model (see MAX_HISTORY_TURNS_FOR_CHAT in featherlessLLMProvider.ts)
     // so cost/context-window usage doesn't grow unbounded with session length.
@@ -165,14 +166,33 @@ sessionsRouter.post(
       focusItems,
     });
 
-    const agentTurn = await prisma.turn.create({
-      data: {
-        sessionId: session.id,
-        speaker: "agent",
-        text: result.agentText,
-        language: session.scenario.language,
-      },
-    });
+    // Timestamps are set explicitly rather than left to @default(now()).
+    // Inside a transaction Postgres resolves CURRENT_TIMESTAMP to the
+    // transaction's start time, so both rows would land on the same instant
+    // and `orderBy: createdAt` could render the reply above the message it
+    // answers.
+    const now = Date.now();
+    const [userTurn, agentTurn] = await prisma.$transaction([
+      prisma.turn.create({
+        data: {
+          sessionId: session.id,
+          speaker: "user",
+          text: parsed.data.text,
+          language: parsed.data.language,
+          fromSuggestion: parsed.data.fromSuggestion,
+          createdAt: new Date(now),
+        },
+      }),
+      prisma.turn.create({
+        data: {
+          sessionId: session.id,
+          speaker: "agent",
+          text: result.agentText,
+          language: session.scenario.language,
+          createdAt: new Date(now + 1),
+        },
+      }),
+    ]);
 
     res.status(201).json({ userTurn: turnToDTO(userTurn), agentTurn: turnToDTO(agentTurn) });
   })
