@@ -282,8 +282,23 @@ with a logged warning.
 
 `assertNoUnexpectedScript` exists because small models genuinely do leak
 characters from unrelated scripts into output meant to be in another language
-(first seen as Cyrillic inside otherwise-correct Spanish). It is a targeted
-check for exactly that, not a translation-quality check.
+(first seen as Cyrillic inside otherwise-correct Spanish). It covers CJK,
+Devanagari, Cyrillic and Arabic as a table rather than a chain of ifs — the
+previous version grew one branch per incident and, as a result, never covered
+Devanagari at all despite Hindi being a supported language.
+
+Every structured call runs it, and always as `softValidate`. `suggestPhrase`
+used to run it as a *hard* check, which meant a user mid-conversation got an
+error instead of a phrase over a few stray characters — the worst place in the
+app to make that trade, since it's the button people press when they're
+already stuck.
+
+Latin characters are never flagged in any language: proper nouns ("Dr. Priya
+Shah") and borrowed terms legitimately appear in Hindi and Mandarin output.
+The consequence is that this catches wholesale script confusion but not
+code-switching — a model writing `आPOINTMENT` in Hindi passes. That failure
+mode is a model-quality problem, addressed by choosing a better
+`FEATHERLESS_MODEL`, not by tightening this check into rejecting good output.
 
 ### Timeouts and retries
 
@@ -480,14 +495,6 @@ tracked here so the next person doesn't have to rediscover them.
 - **`/health` leaks the raw DB error string.**
 - **No token/cost logging.** Usage data is returned by every call and discarded.
 
-**Correctness**
-
-- **Script contamination checks are applied unevenly.** `suggestPhrase` treats
-  a leak as a *hard* failure (so the user gets a 500 instead of a slightly
-  imperfect phrase) while everywhere else it's soft; `generateScenario` and
-  `explainDocument` have no check at all, despite explainDocument being where
-  the problem was first observed.
-
 **Structural**
 
 - **No tests.** The metrics layer is pure functions with plain inputs and
@@ -502,3 +509,6 @@ tracked here so the next person doesn't have to rediscover them.
   backward-compatible.
 - **Band thresholds are invented.** The 40/70 and 40/75 cutoffs that turn a
   number into a judgement were picked, not derived from any distribution.
+- **Script checks catch confusion, not code-switching.** Latin is never
+  flagged, so `आPOINTMENT` in Hindi output passes — that's a model-quality
+  problem, solved by model choice rather than by tightening the check.

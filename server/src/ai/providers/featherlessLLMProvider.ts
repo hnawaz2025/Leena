@@ -90,14 +90,24 @@ in the same role as the user (never another tenant, another patient, another app
 Return ONLY a JSON object with keys: title, personaDescription (who the AI will roleplay as -- the other party, e.g. "a landlord named Mr. Chen" or "a doctor named Dr. Patel", never a role matching the user's own), contextSummary (2-3 sentences of situational context, referring to the person practicing as "the user" -- never as "the immigrant"), openingLine (what the persona says first, in ${input.targetLanguage}), keyVocabulary (array of 5-8 useful words/phrases in ${input.targetLanguage}).
 ${correctionNote ? `\n${correctionNote}` : ""}`;
 
-    return callForJson(generatedScenarioSchema, async (correctionNote) => {
-      const response = await this.client.chat.completions.create({
-        model: this.model,
-        max_tokens: 1024,
-        messages: [{ role: "user", content: buildPrompt(correctionNote) }],
-      });
-      return response.choices[0]?.message?.content ?? "";
-    });
+    return callForJson(
+      generatedScenarioSchema,
+      async (correctionNote) => {
+        const response = await this.client.chat.completions.create({
+          model: this.model,
+          max_tokens: 1024,
+          messages: [{ role: "user", content: buildPrompt(correctionNote) }],
+        });
+        return response.choices[0]?.message?.content ?? "";
+      },
+      undefined,
+      // A scenario is written once and then read on every attempt at it, so a
+      // leak here is more persistent than in a single generated reply.
+      (parsed) => {
+        assertNoUnexpectedScript(parsed.openingLine, input.targetLanguage);
+        parsed.keyVocabulary.forEach((v) => assertNoUnexpectedScript(v, input.targetLanguage));
+      }
+    );
   }
 
   async chatTurn(input: ChatTurnInput): Promise<ChatTurnResult> {
@@ -286,14 +296,27 @@ keyTerms (array of objects with "term" (the confusing word/phrase as it appears 
 actionItems (array of short strings describing anything the reader needs to actually do, e.g. a deadline or required response, written in ${input.nativeLanguage}; empty array if there is nothing actionable).
 ${correctionNote ? `\n${correctionNote}` : ""}`;
 
-    return callForJson(documentExplanationSchema, async (correctionNote) => {
-      const response = await this.client.chat.completions.create({
-        model: this.model,
-        max_tokens: 1536,
-        messages: [{ role: "user", content: buildPrompt(correctionNote) }],
-      });
-      return response.choices[0]?.message?.content ?? "";
-    });
+    return callForJson(
+      documentExplanationSchema,
+      async (correctionNote) => {
+        const response = await this.client.chat.completions.create({
+          model: this.model,
+          max_tokens: 1536,
+          messages: [{ role: "user", content: buildPrompt(correctionNote) }],
+        });
+        return response.choices[0]?.message?.content ?? "";
+      },
+      undefined,
+      // This call is where script contamination was first observed, and it
+      // was somehow the one left unguarded. Everything here is written in the
+      // reader's native language; `term` is excluded because it quotes the
+      // document itself, which is in the target language by definition.
+      (parsed) => {
+        assertNoUnexpectedScript(parsed.summary, input.nativeLanguage);
+        parsed.keyTerms.forEach((t) => assertNoUnexpectedScript(t.definition, input.nativeLanguage));
+        parsed.actionItems.forEach((a) => assertNoUnexpectedScript(a, input.nativeLanguage));
+      }
+    );
   }
 
   async extractDocumentText(input: ExtractDocumentTextInput): Promise<ExtractDocumentTextResult> {
@@ -380,6 +403,12 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
         });
         return response.choices[0]?.message?.content ?? "";
       },
+      undefined,
+      // Soft, not hard. This was the one call site treating a script leak as
+      // fatal, which meant a user mid-conversation got an error instead of a
+      // phrase over a few stray characters -- the opposite of the tradeoff
+      // every other call makes, and worse here than anywhere else, because
+      // this is the button people press when they're already stuck.
       (parsed) => assertNoUnexpectedScript(parsed.suggestedText, input.targetLanguage)
     );
   }

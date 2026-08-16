@@ -5,10 +5,6 @@ import type { z } from "zod";
 // validates it against the given schema, and retries once with an explicit
 // correction instruction before giving up.
 
-// Told the model only that something was wrong, never what -- so a retry
-// after a specific mistake (e.g. an out-of-range index) had nothing to go on
-// and would often make the exact same mistake again. Now built per-attempt
-// from the actual error, so the model sees what it needs to fix.
 // Distinguishes "the model answered badly" from "there was no answer". The
 // OpenAI SDK (which both providers use) attaches a numeric `status` to
 // anything that came back from the wire, and an APIConnectionError for
@@ -21,6 +17,10 @@ function isTransportError(error: unknown): boolean {
   return typeof candidate.name === "string" && /^API(Connection|UserAbort)/.test(candidate.name);
 }
 
+// Told the model only that something was wrong, never what -- so a retry
+// after a specific mistake (e.g. an out-of-range index) had nothing to go on
+// and would often make the exact same mistake again. Now built per-attempt
+// from the actual error, so the model sees what it needs to fix.
 function buildCorrectionNote(error: unknown): string {
   const detail = error instanceof Error ? error.message : String(error);
   return `Your previous response had this problem: ${detail}. Return ONLY a single valid JSON object that fixes this, with no prose before or after it, and no markdown code fences.`;
@@ -32,29 +32,37 @@ function extractJsonBlock(raw: string): string {
   return match[0];
 }
 
-const CJK_RANGE = /[一-鿿぀-ヿ가-힯]/;
-// Seen once for real: a stray Cyrillic word ("nyaetsya"-ish) inside otherwise
-// correct Spanish output. None of this app's supported languages (Spanish,
-// Mandarin, Hindi, English) use Cyrillic, so this check is unconditional.
-const CYRILLIC_RANGE = /[Ѐ-ӿ]/;
+// The non-Latin scripts this app can encounter, and how to recognise a
+// language that legitimately uses each. Written as a table rather than a
+// chain of ifs because the previous version grew one branch per incident --
+// CJK after one, Cyrillic after another -- and silently never covered
+// Devanagari at all, despite Hindi being a supported language.
+const SCRIPTS: { name: string; pattern: RegExp; usedBy: RegExp }[] = [
+  { name: "CJK", pattern: /[぀-ヿ一-鿿가-힯]/, usedBy: /chinese|mandarin|cantonese|japanese|korean/i },
+  { name: "Devanagari", pattern: /[ऀ-ॿ]/, usedBy: /hindi|marathi|nepali|sanskrit/i },
+  { name: "Cyrillic", pattern: /[Ѐ-ӿ]/, usedBy: /russian|ukrainian|bulgarian|serbian/i },
+  { name: "Arabic", pattern: /[؀-ۿ]/, usedBy: /arabic|urdu|farsi|persian|pashto/i },
+];
 
-// Small open-weight models (the free Featherless path) have shown a real
-// failure mode: stray characters from an unrelated script leaking into output
-// meant to be in a different language (seen first in explainDocument's
-// Spanish output, then again as Cyrillic in a Spanish struggle area). This is
-// a cheap, targeted check for exactly that -- not a general
-// translation-quality check.
+/**
+ * Rejects output that has leaked characters from a script the target language
+ * doesn't use -- a real failure mode of small open-weight models, first seen
+ * as stray CJK in Spanish output and again as Cyrillic inside Spanish.
+ *
+ * Latin characters are never flagged, in any language: proper nouns ("Dr.
+ * Smith", "City Eye Clinic") and borrowed terms legitimately appear in Hindi
+ * or Mandarin text, and rejecting those would fail far more good output than
+ * bad. This catches wholesale script confusion, not code-switching, and is
+ * not a translation-quality check.
+ */
 export function assertNoUnexpectedScript(text: string, expectedLanguage: string): void {
-  const isCjkExpected = /chinese|mandarin|japanese|korean/i.test(expectedLanguage);
-  if (!isCjkExpected && CJK_RANGE.test(text)) {
-    throw new Error(
-      `Unexpected CJK characters in output meant to be ${expectedLanguage}: ${text}`
-    );
-  }
-  if (CYRILLIC_RANGE.test(text)) {
-    throw new Error(
-      `Unexpected Cyrillic characters in output meant to be ${expectedLanguage}: ${text}`
-    );
+  for (const script of SCRIPTS) {
+    if (script.usedBy.test(expectedLanguage)) continue;
+    if (script.pattern.test(text)) {
+      throw new Error(
+        `Unexpected ${script.name} characters in output meant to be ${expectedLanguage}: ${text}`
+      );
+    }
   }
 }
 
