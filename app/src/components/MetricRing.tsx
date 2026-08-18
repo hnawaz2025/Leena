@@ -24,9 +24,17 @@ interface MetricRingProps {
   previousLabel?: string;
 }
 
+// A progress ramp, not a traffic light. `low` used to be colors.warning and
+// `mid` the brand amber, so a user's low independence score was rendered in
+// the same colour the app uses for problems -- a judgement on them, in alarm
+// paint, for an audience that already underestimates itself. The numbers were
+// carefully made non-discouraging; the colour was quietly undoing that.
+//
+// These deepen toward confident rather than shifting hue toward danger, and
+// none of them is the semantic warning/error colour.
 const BAND_COLORS: Record<MetricBand, string> = {
-  low: colors.warning,
-  mid: colors.secondary,
+  low: "#8B7FB8",
+  mid: colors.primary,
   high: colors.success,
 };
 

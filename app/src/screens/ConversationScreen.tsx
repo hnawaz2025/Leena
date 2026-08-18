@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Speech from "expo-speech";
 import { LinearGradient } from "expo-linear-gradient";
 import { ChevronRight, Drama, Languages, Send } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -69,6 +69,16 @@ export function ConversationScreen({ route, navigation }: Props) {
   const [expandedTurnsBySessionId, setExpandedTurnsBySessionId] = useState<Record<string, TurnDTO[]>>({});
   const voice = useVoiceRecording();
   const nativeLanguage = useAppStore((s) => s.nativeLanguage);
+  const listRef = useRef<FlatList<ThreadItem>>(null);
+
+  // The persona keeps talking otherwise. Speech.stop() was only called when
+  // ending a session, so navigating back mid-sentence left the voice playing
+  // over whatever screen came next.
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
 
   const { data: scenario } = useQuery({
     queryKey: ["scenario", scenarioId],
@@ -133,7 +143,13 @@ export function ConversationScreen({ route, navigation }: Props) {
         Speech.speak(lastTurn.text, { language: "en-US" });
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      // Put their sentence back. Clearing the box before the request meant a
+      // dropped connection silently deleted something they had just worked
+      // hard to compose -- the most demoralising thing this app could do to
+      // someone already unsure of their English.
+      setInput(text);
+      setInputCameFromHelp(aided);
+      setError(e instanceof Error ? e.message : "Your message did not send. Please try again.");
     } finally {
       setSending(false);
     }
@@ -157,10 +173,15 @@ export function ConversationScreen({ route, navigation }: Props) {
 
   async function handlePracticeAgain() {
     setStartingAgain(true);
+    setError(null);
     try {
       await api.createSession(scenarioId);
       await queryClient.invalidateQueries({ queryKey: ["scenario-sessions", scenarioId] });
       setTab("chat");
+    } catch (e) {
+      // Was a bare try/finally, unlike its siblings -- so a failure here threw
+      // an unhandled rejection and the button just appeared to do nothing.
+      setError(e instanceof Error ? e.message : "We could not start a new practice. Please try again.");
     } finally {
       setStartingAgain(false);
     }
@@ -202,7 +223,9 @@ export function ConversationScreen({ route, navigation }: Props) {
               end={{ x: 1, y: 1 }}
               style={styles.personaAvatar}
             >
-              <Drama size={18} color={colors.white} strokeWidth={2} />
+              {/* Dark on amber, not white: white on #FF8C1A is 2.33:1 and on
+                  the gradient's top stop only 1.80:1. This is 8.0:1. */}
+              <Drama size={18} color={colors.textPrimary} strokeWidth={2.5} />
             </LinearGradient>
             <View style={styles.personaTextGroup}>
               <Text style={styles.personaTitle} numberOfLines={1}>
@@ -241,10 +264,16 @@ export function ConversationScreen({ route, navigation }: Props) {
       ) : (
         <>
           <FlatList
+            ref={listRef}
             style={styles.list}
             contentContainerStyle={styles.listContent}
             data={threadItems}
             keyExtractor={threadItemKey}
+            // Every reply used to land below the fold, so the user scrolled by
+            // hand after each turn -- the single most repeated interaction in
+            // the app. Keyed off content size rather than the data array
+            // because the reply's height isn't known until it has rendered.
+            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
             renderItem={({ item }) => {
               if (item.type === "collapsed") {
                 return (
@@ -272,7 +301,7 @@ export function ConversationScreen({ route, navigation }: Props) {
             ListFooterComponent={sending ? <BreathingDot /> : null}
           />
 
-          {isRecording ? <Text style={styles.listeningNote}>Listening…</Text> : null}
+          {isRecording ? <Text style={styles.listeningNote}>Listening. Tap the microphone when you finish.</Text> : null}
           {(error || voice.error) ? <Text style={styles.error}>{error || voice.error}</Text> : null}
 
           {isCurrentActive ? (
@@ -382,7 +411,7 @@ const styles = StyleSheet.create({
   collapsedText: { ...typography.caption, flex: 1 },
   listeningNote: {
     ...typography.caption,
-    color: colors.error,
+    color: colors.primary,
     textAlign: "center",
     marginBottom: spacing.xs,
   },

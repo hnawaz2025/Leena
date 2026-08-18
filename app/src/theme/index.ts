@@ -8,16 +8,26 @@ export const colors = {
   secondary: "#FF8C1A", // orange bubble
   secondaryLight: "#FFB22F", // orange bubble gradient top
   highlight: "#FFEC83", // pale yellow dots
+  // For icons or text sitting ON amber. White on #FF8C1A measures 2.33:1,
+  // which fails AA badly -- and the amber avatar is the only cue telling the
+  // user which side of the conversation is the stranger.
+  secondaryDeep: "#8A4600", // white on this = 6.4:1
   success: "#3F8F5F",
   warning: "#C48A1E",
-  error: "#D64545",
+  // Was #D64545, which measured 4.10:1 on the app background -- just under AA.
+  error: "#B93232", // 5.52:1
   background: "#F8F7FB",
   surface: "#FFFFFF",
   surfaceWarm: "#FFF3DC",
   border: "#E8E6EF",
-  textPrimary: "#201C2B",
-  textSecondary: "#6B6575",
-  textMuted: "#A29CB0",
+  textPrimary: "#201C2B", // 16.63:1 on surface
+  textSecondary: "#6B6575", // 5.26:1 on background
+  // Was #A29CB0 -- 2.49:1, roughly 45% short of AA, while carrying real
+  // instructions: the rotating placeholder that tells people they may type in
+  // their own language, and the empty state a new user sees first.
+  textMuted: "#736E80", // 4.61:1 on background, 4.92:1 on surface
+  // The old muted value, kept for 1px rules and dividers only -- never text.
+  hairline: "#A29CB0",
   white: "#FFFFFF",
 };
 

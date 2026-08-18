@@ -2,7 +2,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Speech from "expo-speech";
 import { BookOpen, Volume2 } from "lucide-react-native";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { PhraseEntryDTO } from "@leena/shared";
 import { api } from "../api/client";
 import { BreathingDot } from "../components/BreathingDot";
@@ -65,6 +65,20 @@ export function PhrasebookScreen({}: Props) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["phrases"] }),
   });
 
+  // Deleting a phrase removes every lookup behind it, not just the row -- so
+  // the count and history go too. Worth confirming for something the user
+  // cannot recover.
+  function confirmDelete(keyPhrase: string, shown: string) {
+    Alert.alert(
+      "Delete this phrase?",
+      `You will lose "${shown}" and the times you practised it. This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => deletePhrase.mutate(keyPhrase) },
+      ]
+    );
+  }
+
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -90,7 +104,7 @@ export function PhrasebookScreen({}: Props) {
         <PhraseRow
           key={p.keyPhrase}
           phrase={p}
-          onDelete={() => deletePhrase.mutate(p.keyPhrase)}
+          onDelete={() => confirmDelete(p.keyPhrase, p.suggestedText)}
           onPractice={() => practicePhrase.mutate(p.keyPhrase)}
         />
       ))}

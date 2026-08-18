@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Camera, Sprout } from "lucide-react-native";
 import { useState } from "react";
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -59,6 +60,21 @@ export function HomeScreen({ navigation }: Props) {
     mutationFn: api.deleteScenario,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["scenarios"] }),
   });
+
+  // Swipe-to-delete opens on a 38px drag, so a mis-swipe while scrolling put
+  // a red delete button one tap from destroying every attempt at a
+  // conversation and all its feedback. Naming what is lost matters more than
+  // the word "delete" -- these users cannot get any of it back.
+  function confirmDeleteScenario(scenarioId: string, title: string) {
+    Alert.alert(
+      "Delete this practice?",
+      `You will lose "${title}" and all of its feedback. This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => deleteScenario.mutate(scenarioId) },
+      ]
+    );
+  }
 
   function submitLookup(text: string) {
     if (!text.trim()) return;
@@ -137,7 +153,7 @@ export function HomeScreen({ navigation }: Props) {
             }
             renderItem={({ item, index }) => (
               <FadeInItem index={index}>
-                <SwipeableRow onDelete={() => deleteScenario.mutate(item.id)}>
+                <SwipeableRow onDelete={() => confirmDeleteScenario(item.id, item.title)}>
                   <Pressable
                     onPress={() => navigation.navigate("Conversation", { scenarioId: item.id })}
                   >
@@ -185,7 +201,7 @@ export function HomeScreen({ navigation }: Props) {
       {(voice.error || captureError || cameraError) ? (
         <Text style={styles.error}>{voice.error || captureError || cameraError}</Text>
       ) : null}
-      {voice.state === "recording" ? <Text style={styles.listeningNote}>Listening…</Text> : null}
+      {voice.state === "recording" ? <Text style={styles.listeningNote}>Listening. Tap the microphone when you finish.</Text> : null}
       {scanning ? (
         <View style={styles.scanningRow}>
           <BreathingDot size={16} />
@@ -269,7 +285,7 @@ const styles = StyleSheet.create({
   rehearseText: { ...typography.caption, color: colors.primary, fontFamily: typography.bodyBold.fontFamily },
   listeningNote: {
     ...typography.caption,
-    color: colors.error,
+    color: colors.primary,
     textAlign: "center",
     marginBottom: spacing.xs,
   },

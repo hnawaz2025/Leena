@@ -8,15 +8,22 @@ import { OnboardingScreen } from "../screens/OnboardingScreen";
 import { PhrasebookScreen } from "../screens/PhrasebookScreen";
 import { ScenarioSetupScreen } from "../screens/ScenarioSetupScreen";
 import { YourEnglishScreen } from "../screens/YourEnglishScreen";
+import { useAppStore } from "../store/useAppStore";
 import { colors, fontFamily } from "../theme";
 import type { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
+  // A returning user goes straight to Home. This reads the already-hydrated
+  // store rather than doing its own async work, so there is no frame where
+  // onboarding is shown before we know the answer -- App.tsx holds the splash
+  // until hydration finishes.
+  const onboarded = useAppStore((s) => s.onboarded);
+
   return (
     <Stack.Navigator
-      initialRouteName="Onboarding"
+      initialRouteName={onboarded ? "Home" : "Onboarding"}
       screenOptions={({ navigation }) => ({
         headerStyle: { backgroundColor: colors.background },
         headerShadowVisible: false,
