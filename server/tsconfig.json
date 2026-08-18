@@ -12,5 +12,8 @@
     "resolveJsonModule": true,
     "declaration": false
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Tests run from source via tsx, so they never need compiling -- and
+  // shipping them to the server would put test fixtures in the deployed image.
+  "exclude": ["src/**/*.test.ts"]
 }

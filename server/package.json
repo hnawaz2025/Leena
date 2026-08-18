@@ -3,12 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "main": "src/index.ts",
+  "engines": {
+    "node": ">=20 <23"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "prisma generate && tsc -p tsconfig.json",
-    "start": "prisma db push --accept-data-loss --skip-generate && node dist/index.js",
+    "start": "prisma db push --skip-generate && node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },

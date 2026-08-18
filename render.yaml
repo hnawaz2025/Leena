@@ -1,3 +1,12 @@
+# Render Blueprint for the Leena API.
+#
+# Covers the web service and its Postgres. Render Workflows are deliberately
+# absent: Blueprints cannot create or manage them yet, so a workflow has to be
+# added by hand in the dashboard.
+#
+# Secrets (sync: false) are never in this file. Render prompts for them on
+# first deploy and stores them itself.
+
 databases:
   - name: leena-db
     plan: free
@@ -10,18 +19,29 @@ services:
     runtime: node
     plan: free
     rootDir: server
-    buildCommand: cd .. && npm install && npm run build --workspace server
+    # npm ci, not npm install: it installs exactly what package-lock.json
+    # pins, so a deploy can't silently pick up a different dependency version
+    # than the one the tests ran against. The `cd ..` is required because this
+    # is an npm workspace -- dependencies are hoisted to the repo root, so
+    # installing from inside server/ alone would miss them.
+    buildCommand: cd .. && npm ci && npm run build --workspace server
     startCommand: npm run start --workspace server
     healthCheckPath: /health
     envVars:
+      - key: NODE_VERSION
+        value: "22"
       - key: DATABASE_URL
         fromDatabase:
           name: leena-db
           property: connectionString
       - key: AI_LLM_PROVIDER
         value: featherless
+      # GLM-4-9B returned 503 capacity_exhausted for extended stretches during
+      # development; Qwen2.5-7B produced garbled Hindi and out-of-range
+      # indices; Mistral-7B returned unusable output. DeepSeek-V3 is the one
+      # that held up. See server/README.md.
       - key: FEATHERLESS_MODEL
-        value: zai-org/GLM-4-9B-0414
+        value: deepseek-ai/DeepSeek-V3-0324
       - key: FEATHERLESS_API_KEY
         sync: false
       - key: AI_SPEECH_PROVIDER
