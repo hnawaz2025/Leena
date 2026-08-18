@@ -6,7 +6,10 @@ const workspaceRoot = path.resolve(projectRoot, "..");
 
 const config = getDefaultConfig(projectRoot);
 
-config.watchFolders = [workspaceRoot];
+// Appended rather than assigned: replacing the array drops whatever Expo's
+// defaults already watch, which expo-doctor flags. The workspace root is
+// needed on top of those because dependencies are hoisted there.
+config.watchFolders = [...(config.watchFolders ?? []), workspaceRoot];
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules"),

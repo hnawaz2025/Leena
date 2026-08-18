@@ -141,8 +141,16 @@ export function MetricRing({
 }
 
 const styles = StyleSheet.create({
+  // Spelled out rather than spreading StyleSheet.absoluteFill(Object). Which
+  // of those two is a spreadable object and which is a registered style id has
+  // changed between React Native versions, so hardcoding the four properties
+  // is the one form that compiles on all of them.
   overlay: {
-    ...StyleSheet.absoluteFill,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: "center",
     justifyContent: "center",
   },
