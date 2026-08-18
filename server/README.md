@@ -180,7 +180,10 @@ src/
     asyncHandler.ts     promise-rejection → next(err) for Express 4
     errorHandler.ts     terminal error handler
 
-  routes/               one file per resource; all business logic lives here
+  services/
+    sessionAnalysis.ts  end-of-session work, callable off the request path
+
+  routes/               one file per resource
     users.ts            identify (the only unauthenticated route)
     documents.ts        upload, OCR from photo, plain-language explanation
     scenarios.ts        generate a roleplay partner; list/read/delete
@@ -387,6 +390,26 @@ over: it would reject a harmless double-tap, and it would permanently strand
 any session whose analysis threw after the status flag had already flipped —
 because the retry that recovers it is also a second call.
 
+**Ending does not wait for the analysis.** `POST /:id/end` marks the session
+complete, returns `202` in milliseconds, and leaves
+[`services/sessionAnalysis.ts`](src/services/sessionAnalysis.ts) running
+behind it. That work is two model calls and 30–90s; awaiting it meant the app
+sat frozen for the whole of it, at the most emotionally loaded moment in the
+product.
+
+The client polls `GET /:id/feedback`, which `404`s until the report exists.
+Nothing is lost if the process dies mid-analysis — the session is left
+completed with no report, which is precisely the state the guard above treats
+as "this call is the retry".
+
+`runSessionAnalysis` holds an in-process `Set` of session ids so a repeated
+"try again" can't start a second paid run. It logs `analysis: started` /
+`skipped` / `finished … in Ns`, which is the only way to tell a skipped run
+from a duplicate charge without reading the provider's bill. The guard is
+per-instance, so it would not hold across a horizontally scaled deployment —
+that is the limitation a real task queue (Render Workflows) removes, and the
+reason this logic lives in a service module that takes only a session id.
+
 ## Errors
 
 One rule, in [`src/errors.ts`](src/errors.ts): **a message reaches the user
@@ -511,9 +534,9 @@ tracked here so the next person doesn't have to rediscover them.
 
 - **Only the pure modules are tested.** Routes, middleware and the providers
   have no coverage; that needs a test database and a mocked provider.
-- **No service layer.** Business logic lives in route handlers; `sessions.ts`
-  is the biggest one, and "end a session" needs to be callable off the request
-  path eventually.
+- **Only a partial service layer.** `services/sessionAnalysis.ts` exists
+  because end-of-session work had to be callable off the request path, but the
+  rest of the business logic still lives in route handlers.
 - **`prisma db push`, no migrations.** See "Schema changes".
 - **No API versioning.** Matters for mobile specifically: App Store review
   means several client versions talk to one server, so responses need to stay

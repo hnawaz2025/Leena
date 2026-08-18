@@ -5,6 +5,7 @@ import { getLLMProvider } from "../ai";
 import { prisma } from "../db";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { requireUser, type AuthedRequest } from "../middleware/deviceAuth";
+import { startSessionAnalysis } from "../services/sessionAnalysis";
 
 // One attempt at rehearsing a scenario, and everything that happens inside
 // it. The two routes worth reading carefully:
@@ -202,9 +203,13 @@ sessionsRouter.post(
   "/:id/end",
   requireUser,
   asyncHandler(async (req: AuthedRequest, res) => {
+    // Only the scenario is needed here, for the response DTO. The transcript
+    // and user used to be loaded too; the analysis that needed them now
+    // fetches its own, so pulling a whole conversation into this request just
+    // to discard it would be waste.
     const session = await prisma.session.findFirst({
       where: { id: req.params.id, userId: req.userId! },
-      include: { scenario: true, turns: { orderBy: { createdAt: "asc" } }, user: true },
+      include: { scenario: true },
     });
     if (!session) return res.status(404).json({ error: "Session not found" });
 
@@ -232,69 +237,19 @@ sessionsRouter.post(
       data: { status: "completed", endedAt: session.endedAt ?? new Date() },
     });
 
-    // Generated lazily on the first attempt only: it keeps scenario creation
-    // fast, and the list must stay identical across attempts or accumulated
-    // coverage would be measured against a moving target.
-    let checklist = session.scenario.checklist as ChecklistItemDTO[] | null;
-    if (!checklist) {
-      try {
-        const generated = await getLLMProvider().generateChecklist({
-          title: session.scenario.title,
-          situationType: session.scenario.situationType,
-          personaDescription: session.scenario.personaDescription,
-          contextSummary: session.scenario.contextSummary,
-          targetLanguage: session.scenario.language,
-          nativeLanguage: session.user.nativeLanguage,
-        });
-        checklist = generated.items;
-        await prisma.scenario.update({
-          where: { id: session.scenario.id },
-          data: { checklist },
-        });
-      } catch (error) {
-        // The checklist is an enhancement, not a prerequisite for feedback --
-        // never let it cost the user their whole report. Left null so the
-        // next attempt tries again.
-        console.warn(`Checklist generation failed for scenario ${session.scenario.id}:`, error);
-      }
-    }
+    // The analysis is two model calls and runs 30-90s. It used to be awaited
+    // here, so the app sat on a frozen screen for the whole of it at the most
+    // emotionally loaded moment in the product -- right after someone
+    // finished speaking English to a stranger.
+    //
+    // Now the response goes back immediately and the work continues behind
+    // it. The client polls GET /:id/feedback, which 404s until the report
+    // exists. Nothing is lost if this process dies mid-analysis: the session
+    // stays completed with no report, and the guard above treats exactly that
+    // state as "this call is the retry".
+    startSessionAnalysis(session.id);
 
-    // MVP runs this inline; the plan moves this to a Render Workflow task
-    // (analyze_session) once the Workflows service is wired up, so it runs
-    // off the request path.
-    const analysis = await getLLMProvider().analyzeSession({
-      targetLanguage: session.scenario.language,
-      nativeLanguage: session.user.nativeLanguage,
-      transcript: session.turns.map((t) => ({ speaker: t.speaker as "user" | "agent", text: t.text })),
-      checklist: checklist?.map((c) => c.en),
-    });
-
-    await prisma.feedbackReport.upsert({
-      where: { sessionId: session.id },
-      update: {
-        summary: analysis.summary,
-        summaryNative: analysis.summaryNative,
-        vocabularySuggestions: analysis.vocabularySuggestions,
-        conversationSummary: analysis.conversationSummary,
-        conversationSummaryNative: analysis.conversationSummaryNative,
-        coveredIndices: analysis.coveredIndices,
-        nonAnswerTurnIndices: analysis.nonAnswerTurnIndices,
-        clarificationTurnIndices: analysis.clarificationTurnIndices,
-      },
-      create: {
-        sessionId: session.id,
-        summary: analysis.summary,
-        summaryNative: analysis.summaryNative,
-        vocabularySuggestions: analysis.vocabularySuggestions,
-        conversationSummary: analysis.conversationSummary,
-        conversationSummaryNative: analysis.conversationSummaryNative,
-        coveredIndices: analysis.coveredIndices,
-        nonAnswerTurnIndices: analysis.nonAnswerTurnIndices,
-        clarificationTurnIndices: analysis.clarificationTurnIndices,
-      },
-    });
-
-    res.json(sessionToDTO({ ...updated, scenario: session.scenario }));
+    res.status(202).json(sessionToDTO({ ...updated, scenario: session.scenario }));
   })
 );
 
