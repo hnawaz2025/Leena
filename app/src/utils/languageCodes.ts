@@ -6,6 +6,7 @@ const LANGUAGE_CODES: Record<string, string> = {
   Spanish: "es",
   Mandarin: "zh",
   Hindi: "hi",
+  Urdu: "ur",
   English: "en",
 };
 
@@ -21,6 +22,7 @@ const SITUATION_EXAMPLES: Record<string, string> = {
   Spanish: "p. ej. Le voy a pedir a mi casero que no suba la renta…",
   Mandarin: "例如：我要跟房东说不要涨房租…",
   Hindi: "जैसे: मैं अपने मकान मालिक से किराया न बढ़ाने के लिए कहूँगा…",
+  Urdu: "مثلاً: میں اپنے مکان مالک سے کہوں گا کہ کرایہ نہ بڑھائے…",
 };
 
 export function getSituationExample(displayName: string): string {
@@ -36,6 +38,7 @@ const QUICK_LOOKUP_EXAMPLES: Record<string, string> = {
   Spanish: "Quiero devolver esto",
   Mandarin: "我想退这个",
   Hindi: "मुझे यह वापस करना है",
+  Urdu: "میں یہ واپس کرنا چاہتا ہوں",
 };
 
 const QUICK_LOOKUP_EXAMPLE_ENGLISH = "I'd like to return this";

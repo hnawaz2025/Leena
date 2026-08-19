@@ -12,7 +12,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
 
 // Scoped to 3 for the hackathon demo to showcase the value clearly;
 // more languages are a post-hackathon addition, not a technical limitation.
-const COMMON_LANGUAGES = ["Spanish", "Mandarin", "Hindi"];
+const COMMON_LANGUAGES = ["Spanish", "Mandarin", "Hindi", "Urdu"];
 
 export function OnboardingScreen({ navigation }: Props) {
   const [nativeLanguage, setNativeLanguage] = useState("");
