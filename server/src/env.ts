@@ -15,6 +15,12 @@ const baseSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   FEATHERLESS_API_KEY: z.string().optional(),
   FEATHERLESS_MODEL: z.string().optional(),
+  // Both optional and unvalidated together on purpose: session analysis
+  // works in-process with neither set. When both are present, POST
+  // /sessions/:id/end dispatches to the Render Workflow instead -- a
+  // deploy-time upgrade, never a requirement.
+  RENDER_API_KEY: z.string().optional(),
+  RENDER_WORKFLOW_TASK_SLUG: z.string().optional(),
 });
 
 const envSchema = baseSchema.superRefine((env, ctx) => {

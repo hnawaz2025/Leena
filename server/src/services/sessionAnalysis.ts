@@ -1,4 +1,5 @@
 import type { ChecklistItemDTO } from "@leena/shared";
+import { Render } from "@renderinc/sdk";
 import { getLLMProvider } from "../ai";
 import { prisma } from "../db";
 
@@ -119,13 +120,31 @@ export async function runSessionAnalysis(sessionId: string): Promise<void> {
 /**
  * Start an analysis without waiting for it.
  *
- * The rejection handler is not optional: an un-awaited promise that rejects
- * takes the whole process down on unhandled rejection, and this one runs two
- * network calls to a flaky provider. Failures are logged and left alone --
- * the session stays completed with no report, which is exactly the state
- * POST /:id/end treats as "retry me".
+ * Dispatches to the Render Workflow when RENDER_API_KEY and
+ * RENDER_WORKFLOW_TASK_SLUG are set, so analysis survives this instance
+ * restarting mid-run and gets Render's own retry/backoff instead of the
+ * hand-rolled kind below. Falls back to running in-process otherwise --
+ * unconfigured is a valid deploy state, not an error.
+ *
+ * The rejection handler is not optional either way: an un-awaited promise
+ * that rejects takes the whole process down on unhandled rejection, and both
+ * paths run network calls to something that can fail. Failures are logged
+ * and left alone -- the session stays completed with no report, which is
+ * exactly the state POST /:id/end treats as "retry me".
  */
 export function startSessionAnalysis(sessionId: string): void {
+  const taskSlug = process.env.RENDER_WORKFLOW_TASK_SLUG;
+  if (process.env.RENDER_API_KEY && taskSlug) {
+    const render = new Render();
+    void render.workflows.startTask(taskSlug, [sessionId]).catch((error) => {
+      console.error(`Workflow dispatch failed for session ${sessionId}, falling back:`, error);
+      return runSessionAnalysis(sessionId);
+    }).catch((error) => {
+      console.error(`Background analysis failed for session ${sessionId}:`, error);
+    });
+    return;
+  }
+
   void runSessionAnalysis(sessionId).catch((error) => {
     console.error(`Background analysis failed for session ${sessionId}:`, error);
   });

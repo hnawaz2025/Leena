@@ -1,8 +1,13 @@
 # Render Blueprint for the Leena API.
 #
 # Covers the web service and its Postgres. Render Workflows are deliberately
-# absent: Blueprints cannot create or manage them yet, so a workflow has to be
-# added by hand in the dashboard.
+# absent: Blueprints cannot create or manage them yet, so the Workflow
+# service (post-session analysis, see server/src/workflows/) has to be added
+# by hand in the dashboard: New > Workflow, point it at this repo with root
+# dir "server", build command "npm ci", start command "npm run workflow".
+# Once that service exists, set RENDER_API_KEY and RENDER_WORKFLOW_TASK_SLUG
+# (format "workflow-slug/analyzeSession") on leena-server below so
+# POST /sessions/:id/end dispatches to it instead of running in-process.
 #
 # Secrets (sync: false) are never in this file. Render prompts for them on
 # first deploy and stores them itself.
@@ -47,4 +52,10 @@ services:
       - key: AI_SPEECH_PROVIDER
         value: openai
       - key: OPENAI_API_KEY
+        sync: false
+      # Both optional -- see the note at the top of this file. Leave unset
+      # (or delete these two) to keep running session analysis in-process.
+      - key: RENDER_API_KEY
+        sync: false
+      - key: RENDER_WORKFLOW_TASK_SLUG
         sync: false

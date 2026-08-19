@@ -10,7 +10,15 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "declaration": false
+    "declaration": false,
+    // @renderinc/sdk exposes "./workflows" only as a package.json subpath
+    // export, which moduleResolution "node" (TS's classic resolver) can't
+    // see. This maps it by hand rather than switching the whole project to
+    // node16/bundler resolution, which would force explicit file extensions
+    // on every relative import in the codebase.
+    "paths": {
+      "@renderinc/sdk/workflows": ["../node_modules/@renderinc/sdk/dist/workflows/index.d.ts"]
+    }
   },
   "include": ["src"],
   // Tests run from source via tsx, so they never need compiling -- and

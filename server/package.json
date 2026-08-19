@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "workflow": "tsx src/workflows/index.ts",
     "postinstall": "prisma generate",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -19,6 +20,7 @@
   "dependencies": {
     "@leena/shared": "*",
     "@prisma/client": "^5.20.0",
+    "@renderinc/sdk": "^0.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
