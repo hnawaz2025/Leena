@@ -4,8 +4,8 @@
 
 # Leena
 
-You don't get a second take on the call where you ask your landlord not to
-raise the rent. Leena is where you get twenty.
+**You don't get a second take on the call where you ask your landlord not to
+raise the rent. Leena is where you get twenty.**
 
 It's a rehearsal partner for the English conversations immigrants have to
 get right on the first try — the doctor's office, the USCIS interview, the
