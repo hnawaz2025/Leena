@@ -17,6 +17,11 @@ const helpSchema = z.object({
   nativeLanguageText: z.string().min(1),
   nativeLanguage: z.string().min(2),
   sessionId: z.string().uuid().optional(),
+  // OCR'd text from a photo taken alongside this request -- e.g. a menu, so
+  // "help me order the first burger" resolves to an actual item. Ephemeral:
+  // used to ground this one suggestion and never persisted, unlike
+  // roleplayContext which is derived fresh from stored rows every time.
+  documentContext: z.string().optional(),
 });
 
 // Caps how much of the user's phrase history gets fed back into the prompt
@@ -69,6 +74,7 @@ helpRouter.post(
       nativeLanguageText: parsed.data.nativeLanguageText,
       nativeLanguage: parsed.data.nativeLanguage,
       knownPhrases: known.map((k) => k.keyPhrase),
+      documentContext: parsed.data.documentContext,
     });
 
     const event = await prisma.translationAssistEvent.create({

@@ -10,6 +10,9 @@ interface QuickLookupSheetProps {
   visible: boolean;
   nativeLanguageText: string;
   nativeLanguage: string;
+  // OCR'd text from a photo attached to this lookup, if any -- see Home's
+  // camera button. Grounds the suggestion in what's actually on the page.
+  documentContext?: string;
   onClose: () => void;
   onPracticeThis: (englishText: string) => void;
 }
@@ -22,6 +25,7 @@ export function QuickLookupSheet({
   visible,
   nativeLanguageText,
   nativeLanguage,
+  documentContext,
   onClose,
   onPracticeThis,
 }: QuickLookupSheetProps) {
@@ -38,7 +42,7 @@ export function QuickLookupSheet({
     setResult(null);
 
     api
-      .requestHelpPhrase(nativeLanguageText.trim(), nativeLanguage)
+      .requestHelpPhrase(nativeLanguageText.trim(), nativeLanguage, undefined, documentContext)
       .then((r) => {
         if (cancelled) return;
         setResult({ eventId: r.id, suggestedText: r.suggestedText });
@@ -56,7 +60,7 @@ export function QuickLookupSheet({
     return () => {
       cancelled = true;
     };
-  }, [visible, nativeLanguageText, nativeLanguage]);
+  }, [visible, nativeLanguageText, nativeLanguage, documentContext]);
 
   function handleClose() {
     Speech.stop();
@@ -79,9 +83,14 @@ export function QuickLookupSheet({
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <Text style={styles.youSaid} numberOfLines={2}>
-              {nativeLanguageText}
-            </Text>
+            <View style={styles.headerText}>
+              <Text style={styles.youSaid} numberOfLines={2}>
+                {nativeLanguageText}
+              </Text>
+              {documentContext ? (
+                <Text style={styles.photoNote}>Using your photo</Text>
+              ) : null}
+            </View>
             <Pressable onPress={handleClose} hitSlop={8}>
               <X size={20} color={colors.textSecondary} strokeWidth={2.5} />
             </Pressable>
@@ -144,7 +153,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  youSaid: { ...typography.caption, flex: 1, fontStyle: "italic" },
+  headerText: { flex: 1 },
+  youSaid: { ...typography.caption, fontStyle: "italic" },
+  photoNote: { ...typography.caption, color: colors.primary, marginTop: spacing.xs / 2 },
   center: { alignItems: "center", paddingVertical: spacing.xl },
   answerRow: {
     flexDirection: "row",

@@ -33,6 +33,10 @@ const MAX_HISTORY_TURNS_FOR_CHAT = 16;
 const MAX_TRANSCRIPT_TURNS_FOR_ANALYSIS = 40;
 const MAX_DOCUMENT_CHARS_FOR_EXPLANATION = 6000;
 const MAX_HISTORY_TURNS_FOR_HELP = 8;
+// Smaller than MAX_DOCUMENT_CHARS_FOR_EXPLANATION on purpose: here the photo
+// is supporting context for one phrase, not the whole task, so a menu or
+// letter only needs to be legible enough to answer a specific question.
+const MAX_DOCUMENT_CHARS_FOR_HELP = 2000;
 
 // The main FEATHERLESS_MODEL (e.g. GLM-4-9B-0414) is text-only. Document
 // photo capture needs actual vision, so this is a separate, dedicated model
@@ -379,11 +383,21 @@ receptionist -- do not produce a stiff textbook translation.`;
       ? `; if this request means essentially the same thing as one of these phrases the learner has already looked up, reuse that string EXACTLY rather than inventing a new wording: ${input.knownPhrases.map((p) => `"${p}"`).join(", ")}`
       : "";
 
+    // Grounds the answer in what's actually on the page -- "the first
+    // burger" or "the deadline on this form" only resolves to a real phrase
+    // if the model can see the same text the learner is looking at.
+    const documentNote = input.documentContext
+      ? `\n\nThey took a photo of something in front of them, which contains this text:
+"""${input.documentContext.slice(0, MAX_DOCUMENT_CHARS_FOR_HELP)}"""
+Use it to make the phrase specific -- e.g. if they ask how to order "the first burger,"
+name the actual item from the text rather than speaking generically.`
+      : "";
+
     const buildPrompt = (correctionNote?: string) => `${situation}
 
 The learner is stuck on how to say something in ${input.targetLanguage}. They said, in their
 native language (${input.nativeLanguage}):
-"""${input.nativeLanguageText}"""
+"""${input.nativeLanguageText}"""${documentNote}
 
 ${guidance} Keep it to 1-2 short sentences, the way a real person would actually say it out loud.
 

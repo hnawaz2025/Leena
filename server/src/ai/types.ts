@@ -89,6 +89,11 @@ export interface SuggestPhraseInput {
   history?: { speaker: "user" | "agent"; text: string }[];
   nativeLanguageText: string;
   nativeLanguage: string;
+  // Text OCR'd from a photo taken alongside this request -- a menu, a sign,
+  // a form -- so "help me order the first burger" can be answered against
+  // what's actually on the page instead of guessed at from the question
+  // alone.
+  documentContext?: string;
   // keyPhrases this user has already been given. The model is asked to reuse
   // one verbatim when the new request means the same thing, so the phrasebook
   // groups paraphrases ("could you repeat that" / "could you say that again")

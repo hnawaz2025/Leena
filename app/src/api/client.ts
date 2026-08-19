@@ -128,11 +128,18 @@ export const api = {
     }),
 
   // sessionId is omitted for a standalone quick lookup -- the suggestion is
-  // then generated without any roleplay context.
-  requestHelpPhrase: (nativeLanguageText: string, nativeLanguage: string, sessionId?: string) =>
+  // then generated without any roleplay context. documentContext is the
+  // OCR'd text of a photo attached to this lookup (e.g. a menu), so the
+  // answer can name an actual item instead of speaking generically.
+  requestHelpPhrase: (
+    nativeLanguageText: string,
+    nativeLanguage: string,
+    sessionId?: string,
+    documentContext?: string
+  ) =>
     request<import("@leena/shared").HelpSuggestionDTO>("/help", {
       method: "POST",
-      body: JSON.stringify({ nativeLanguageText, nativeLanguage, sessionId }),
+      body: JSON.stringify({ nativeLanguageText, nativeLanguage, sessionId, documentContext }),
     }),
 
   markHelpPhraseUsed: (eventId: string) =>

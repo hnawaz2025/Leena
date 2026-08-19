@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Camera, Sprout } from "lucide-react-native";
+import { ArrowRight, Camera, Sprout, X } from "lucide-react-native";
 import { useState } from "react";
 import {
   Alert,
@@ -43,6 +43,10 @@ export function HomeScreen({ navigation }: Props) {
   const [submittedText, setSubmittedText] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  // OCR'd text from a photo attached to the quick lookup below -- a menu, a
+  // sign -- so "help me order the first burger" can name the actual item
+  // instead of Camera always jumping to a full document explanation.
+  const [documentContext, setDocumentContext] = useState<string | null>(null);
   const nativeLanguage = useAppStore((s) => s.nativeLanguage);
   const voice = useVoiceRecording();
   const { capture, scanning, error: captureError } = useDocumentCapture();
@@ -83,16 +87,25 @@ export function HomeScreen({ navigation }: Props) {
     setSheetOpen(true);
   }
 
-  // Straight from photo to plain-language explanation, skipping the
-  // review/edit step DocumentUploadScreen shows. Someone holding up a letter
-  // they can't read wants the answer, not a text box; a bad OCR is fixed by
-  // retaking the photo.
+  // One photo, two different needs: someone holding up a letter wants the
+  // whole thing explained, someone looking at a menu wants one question
+  // answered about it ("help me order the first burger"). OCR runs once
+  // either way -- the choice below only decides what happens to the text
+  // afterward, not a second capture or a second vision call.
   async function handleCameraPress() {
     setCameraError(null);
     const captured = await capture("camera");
     if (!captured) return;
+    Alert.alert("Got it", "Do you want this explained, or do you have a question about it?", [
+      { text: "Explain the whole thing", onPress: () => explainCapturedDocument(captured.text) },
+      { text: "I have a question", onPress: () => setDocumentContext(captured.text) },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
+  async function explainCapturedDocument(text: string) {
     try {
-      const document = await api.createDocument("other", captured.text);
+      const document = await api.createDocument("other", text);
       navigation.navigate("DocumentExplanation", { documentId: document.id, documentType: "other" });
     } catch (e) {
       setCameraError(e instanceof Error ? e.message : "Something went wrong");
@@ -208,6 +221,15 @@ export function HomeScreen({ navigation }: Props) {
           <Text style={styles.scanningText}>Reading document…</Text>
         </View>
       ) : null}
+      {documentContext && !scanning ? (
+        <View style={styles.attachmentRow}>
+          <Camera size={14} color={colors.primary} strokeWidth={2} />
+          <Text style={styles.attachmentText}>Photo attached — ask your question below</Text>
+          <Pressable onPress={() => setDocumentContext(null)} hitSlop={8}>
+            <X size={16} color={colors.textSecondary} strokeWidth={2.5} />
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={styles.inputRow}>
         <Pressable style={styles.cameraButton} onPress={handleCameraPress} disabled={scanning}>
@@ -233,6 +255,7 @@ export function HomeScreen({ navigation }: Props) {
         visible={sheetOpen}
         nativeLanguageText={submittedText}
         nativeLanguage={nativeLanguage}
+        documentContext={documentContext ?? undefined}
         onClose={() => setSheetOpen(false)}
         onPracticeThis={(englishText) => {
           setSheetOpen(false);
@@ -298,6 +321,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   scanningText: { ...typography.caption, color: colors.primaryDark },
+  attachmentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceWarm,
+    borderRadius: radius.card,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  attachmentText: { ...typography.caption, color: colors.primaryDark, flex: 1 },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
