@@ -2,7 +2,7 @@
   <img src="leena_icon.png" alt="Leena" width="160" />
 </p> -->
 
-<p align="center">
+<p align="left">
   <img src="leena_icon.png" alt="Leena" width="160" />
 </p> # Leena 
 
