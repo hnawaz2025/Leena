@@ -3,8 +3,8 @@
   Leena
 </h1>
 
-**You don't get a second take on the call where you ask your landlord not to
-raise the rent. Leena is where you get twenty.**
+You don't get a second take on the call where you ask your landlord not to
+raise the rent. Leena is where you get twenty.
 
 It's a rehearsal partner for the English conversations immigrants have to
 get right on the first try — the doctor's office, the USCIS interview, the
@@ -60,7 +60,7 @@ packages/shared/   TypeScript types shared by both — the DTO contract
 
 Each has its own README with the actual engineering detail:
 [`app/README.md`](app/README.md) · [`server/README.md`](server/README.md).
-This file stays at the product level; go there for architecture!
+This file stays at the product level; go there for architecture.
 
 ## Running it
 
