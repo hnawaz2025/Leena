@@ -175,104 +175,123 @@ const scenarios: DemoScenario[] = [
     ],
   },
   {
-    title: "Disputing a charge on my phone bill",
-    persona: "Marcus, a customer service representative",
+    title: "Parent-teacher conference for my daughter",
+    persona: "Ms. Whitfield, your daughter's third-grade teacher",
     checklist: [
       [
-        "Explain what looks wrong on the bill",
-        { Hindi: "बिल में क्या गलत लग रहा है यह बताएं", Mandarin: "解释账单上哪里有问题" },
+        "Ask how your child is doing overall",
+        { Hindi: "पूछें कि आपकी बेटी कुल मिलाकर कैसा कर रही है", Mandarin: "询问你的孩子总体表现如何" },
       ],
       [
-        "Say what you normally pay",
-        { Hindi: "आप आमतौर पर कितना भुगतान करते हैं यह बताएं", Mandarin: "说明你平常支付的金额" },
+        "Ask which subjects she's struggling with",
+        { Hindi: "पूछें कि वह किन विषयों में कठिनाई महसूस कर रही है", Mandarin: "询问她在哪些科目上有困难" },
       ],
-      ["Ask them to check the account", { Hindi: "खाता जांचने के लिए कहें", Mandarin: "请对方检查账户" }],
       [
-        "Ask for the extra charge to be removed",
-        { Hindi: "अतिरिक्त शुल्क हटाने के लिए कहें", Mandarin: "要求取消多收的费用" },
+        "Explain her routine at home",
+        { Hindi: "घर पर उसकी दिनचर्या के बारे में बताएं", Mandarin: "解释她在家的日常安排" },
       ],
-      ["Ask when the refund will arrive", { Hindi: "पूछें कि रिफंड कब आएगा", Mandarin: "询问退款何时到账" }],
-      ["Get a reference number", { Hindi: "संदर्भ नंबर प्राप्त करें", Mandarin: "获取一个参考编号" }],
       [
-        "Ask to speak to a manager if needed",
-        { Hindi: "ज़रूरत पड़े तो मैनेजर से बात करने के लिए कहें", Mandarin: "如有需要，要求与经理通话" },
+        "Ask what you can do to help at home",
+        { Hindi: "पूछें कि आप घर पर मदद के लिए क्या कर सकते हैं", Mandarin: "询问你在家能做些什么来帮助她" },
+      ],
+      [
+        "Ask about upcoming tests or assignments",
+        { Hindi: "आगामी परीक्षाओं या असाइनमेंट के बारे में पूछें", Mandarin: "询问即将到来的测验或作业" },
+      ],
+      [
+        "Ask if she needs extra support, like ESL",
+        {
+          Hindi: "पूछें कि क्या उसे अतिरिक्त सहायता चाहिए, जैसे ईएसएल",
+          Mandarin: "询问她是否需要额外支持，比如ESL",
+        },
+      ],
+      [
+        "Ask them to repeat something you missed",
+        { Hindi: "जो आपको समझ नहीं आया उसे दोहराने के लिए कहें", Mandarin: "请对方重复你没听懂的地方" },
+      ],
+      [
+        "Schedule a follow-up conversation",
+        { Hindi: "अगली बातचीत के लिए समय तय करें", Mandarin: "安排下一次谈话的时间" },
       ],
     ],
     sessions: [
       {
-        daysAgo: 20,
+        daysAgo: 22,
         covered: [0],
         exchanges: [
           {
-            agent: "Thanks for calling. What can I help you with today?",
-            user: "There is a problem.",
+            agent: "Thanks for coming in. Overall, how do you think she's doing?",
+            user: "She is okay.",
             help: {
-              native: { Hindi: "मेरे बिल में इस महीने एक गलती है", Mandarin: "我这个月的账单有一个错误" },
-              suggested: "There is a mistake on my bill this month.",
-              keyPhrase: "there is a mistake on my bill this month",
+              native: {
+                Hindi: "मुझे लगता है कि वह ठीक कर रही है, लेकिन मुझे पक्का नहीं पता",
+                Mandarin: "我觉得她做得还不错，但我不太确定",
+              },
+              suggested: "I think she's doing okay, but I'm not totally sure.",
+              keyPhrase: "i think she's doing okay but i'm not sure",
             },
           },
           {
-            agent: "What amount are you seeing on the statement?",
+            agent: "Are there any subjects she seems to struggle with at home?",
             user: "I don't know.",
           },
           {
-            agent: "Why do you think the amount changed?",
+            agent: "That's alright. What does her evening routine look like?",
             user: "Okay.",
           },
           {
-            agent: "Would you like me to check the account for you?",
+            agent: "No problem — is there anything specific you'd like to ask me today?",
             user: "Mm.",
             help: {
-              native: { Hindi: "जी हां, कृपया खाता जांचें", Mandarin: "好的，请检查一下账户" },
-              suggested: "Yes please, could you check the account?",
-              keyPhrase: "could you check the account",
+              native: { Hindi: "क्या मैं घर पर उसकी मदद के लिए कुछ कर सकता हूं", Mandarin: "我能在家帮她做些什么吗" },
+              suggested: "Is there anything I can do at home to help her?",
+              keyPhrase: "is there anything i can do at home to help her",
             },
           },
         ],
       },
       {
-        daysAgo: 9,
-        covered: [0, 1, 2],
+        daysAgo: 10,
+        covered: [0, 1, 3],
         exchanges: [
           {
-            agent: "Thanks for calling. What can I help you with today?",
-            user: "There is a mistake on my bill this month.",
+            agent: "Thanks for coming in. Overall, how do you think she's doing?",
+            user: "I think she's doing okay, but I'm not totally sure.",
           },
           {
-            agent: "What amount are you seeing on the statement?",
-            user: "It says one hundred twenty dollars but I usually pay sixty.",
+            agent: "Are there any subjects she seems to struggle with at home?",
+            user: "She has trouble with reading, especially new words.",
           },
           {
-            agent: "Why do you think the amount changed?",
+            agent: "That's helpful to know. What does her evening routine look like?",
             user: "Okay.",
           },
           {
-            agent: "Would you like me to check the account for you?",
-            user: "Yes please, that would help.",
+            agent: "No problem — is there anything specific you'd like to ask me today?",
+            user: "Is there anything I can do at home to help her?",
             help: {
-              native: { Hindi: "जी हां, कृपया खाता जांचें", Mandarin: "好的，请检查一下账户" },
-              suggested: "Yes please, could you check the account?",
-              keyPhrase: "could you check the account",
+              native: { Hindi: "आप हर रात 15 मिनट साथ पढ़ने की कोशिश कर सकते हैं", Mandarin: "你可以试着每晚一起读书15分钟" },
+              suggested: "You could try reading together for 15 minutes every night.",
+              keyPhrase: "reading together for 15 minutes every night",
             },
           },
         ],
       },
       {
-        daysAgo: 2,
-        covered: [3, 5],
+        daysAgo: 4,
+        covered: [2, 4, 7],
         exchanges: [
           {
-            agent: "What would you like me to do about the extra charge?",
-            user: "Please remove it from my account and refund the difference.",
+            agent: "How has the evening reading been going since we last spoke?",
+            user: "We read together most nights, and she is enjoying it more now.",
           },
           {
-            agent: "When would be a good time to call you back?",
-            user: "Okay.",
+            agent: "That's great progress. There's a small reading test coming up next Friday.",
+            user: "Thank you for telling me. Is there anything specific she should practice?",
           },
           {
-            agent: "What else can I help you with today?",
-            user: "Could I have a reference number for this call?",
+            agent: "Mostly just sight words — I'll send a list home. Should we plan to check in again soon?",
+            user: "Yes, could we meet again in one month?",
           },
         ],
       },
