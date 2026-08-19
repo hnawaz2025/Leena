@@ -36,6 +36,11 @@ export function SwipeableRow({ children, onDelete, bottomInset = spacing.md }: S
 
   const panResponder = useRef(
     PanResponder.create({
+      // Once open, claim every touch on the row up front -- a plain tap
+      // should close the row again rather than falling through to whatever
+      // the row itself does (e.g. navigating away), which otherwise strands
+      // the user on the delete side with no easy way back.
+      onStartShouldSetPanResponderCapture: () => openRef.current,
       // Only claim the gesture once it's clearly horizontal, otherwise the
       // FlatList can never scroll vertically through these rows.
       onMoveShouldSetPanResponder: (_e, g) =>
@@ -46,8 +51,15 @@ export function SwipeableRow({ children, onDelete, bottomInset = spacing.md }: S
         translateX.setValue(next);
       },
       onPanResponderRelease: (_e, g) => {
-        const base = openRef.current ? -ACTION_WIDTH : 0;
+        const wasOpen = openRef.current;
+        const base = wasOpen ? -ACTION_WIDTH : 0;
         const finalX = base + g.dx;
+        // A tap (negligible movement) while open closes the row instead of
+        // reopening it at the same offset.
+        if (wasOpen && Math.abs(g.dx) < 8) {
+          slideTo(0);
+          return;
+        }
         slideTo(finalX < -OPEN_THRESHOLD ? -ACTION_WIDTH : 0);
       },
       onPanResponderTerminate: () => slideTo(openRef.current ? -ACTION_WIDTH : 0),
