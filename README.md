@@ -61,7 +61,7 @@ packages/shared/   TypeScript types shared by both — the DTO contract
 
 Each has its own README with the actual engineering detail:
 [`app/README.md`](app/README.md) · [`server/README.md`](server/README.md).
-This file stays at the product level; go there for architecture.
+This file stays at the product level; go there for architecture!
 
 ## Running it
 
