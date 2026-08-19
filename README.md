@@ -34,10 +34,7 @@ flowchart LR
 ```
 
 The persona always opens — never a blank screen, exactly like the real
-conversation would go. The debrief comes back in your own language, not
-just English, because a plain-language explanation that reads like a machine
-translated it defeats the point for someone already worried about being
-talked down to.
+conversation would go.
 
 ## Repo layout
 
@@ -76,7 +73,7 @@ you're actually changing server code.
 
 ## Why it's built this way
 
-Three decisions that shape everything downstream, made with a specific user
+Four decisions that shape everything downstream, made with a specific user
 in mind — someone already anxious about being misunderstood, opening an app
 for the first time, on a phone, possibly mid-crisis about a letter they got
 that day:
@@ -86,6 +83,12 @@ nothing else. The cost is real: identity is bound to a device install, no
 recovery, no multi-device sync. For this audience that trade is correct — a
 locked-out applicant abandoning the app at a password-reset screen is a
 worse outcome than the data-portability gap.
+
+**Every debrief is generated in your native language, not translated after
+the fact.** The model is asked to produce the native-language explanation
+directly, not to translate its own English output — a document explanation
+that reads like a machine translated it defeats the purpose for someone
+already worried about being talked down to.
 
 **Asking for clarification is never scored as a failure.** It's the single
 behavior the product exists to build — this audience already under-rehearses
