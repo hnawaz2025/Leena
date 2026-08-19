@@ -26,10 +26,6 @@ import { prisma } from "../db";
 // Workflows) would solve properly.
 const inFlight = new Set<string>();
 
-export function isAnalysisInFlight(sessionId: string): boolean {
-  return inFlight.has(sessionId);
-}
-
 /**
  * Analyse a completed session and write its feedback report.
  *
