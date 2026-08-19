@@ -1,3 +1,4 @@
+import { useHeaderHeight } from "@react-navigation/elements";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Speech from "expo-speech";
@@ -52,6 +53,10 @@ function threadItemKey(item: ThreadItem): string {
 // again to stop -> Whisper transcribes it into the text input for review ->
 // send as normal -> the agent's reply is read aloud with on-device TTS.
 export function ConversationScreen({ route, navigation }: Props) {
+  // Same fix as Home: KeyboardAvoidingView measures from below the nav
+  // header, so "padding" behavior overshoots by exactly the header's height
+  // without this offset, leaving the input hidden behind the keyboard.
+  const headerHeight = useHeaderHeight();
   const { scenarioId } = route.params;
   const queryClient = useQueryClient();
   const [input, setInput] = useState("");
@@ -212,7 +217,8 @@ export function ConversationScreen({ route, navigation }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
     >
       {scenario ? (
         <Pressable onPress={() => setInfoOpen(true)}>
