@@ -120,3 +120,14 @@ and an app-store review cycle can't ship a stale prompt.
 Nothing here is hidden behind a comment saying `// TODO`. Both sub-READMEs
 keep an honest "known gaps" section for exactly the things a first read
 would otherwise have to rediscover the hard way.
+
+## What's next
+
+**Spaced-repetition push notifications.** The data for this already exists:
+every phrase lookup is logged as an append-only, timestamped event (see
+`PhrasePracticeEvent` in [`server/README.md`](server/README.md#the-data-model)),
+specifically so a reminder like "you haven't practiced *'could you repeat
+that?'* in 10 days" is a query away, not a redesign. What's missing is the
+delivery side — an Expo push token per device and a scheduled job to pick
+which phrase to resurface and when — real infrastructure worth building
+deliberately, not bolting on the night before a deadline.
