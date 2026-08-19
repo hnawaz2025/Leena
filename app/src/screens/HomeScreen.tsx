@@ -1,3 +1,4 @@
+import { useHeaderHeight } from "@react-navigation/elements";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Camera, Sprout, X } from "lucide-react-native";
@@ -39,6 +40,11 @@ type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 // quick lookup is the always-present bottom input, and rehearsing a full
 // conversation is a separate, clearly-labelled action.
 export function HomeScreen({ navigation }: Props) {
+  // KeyboardAvoidingView measures from its own top edge, which is below the
+  // nav header -- without this offset "padding" behavior overshoots by
+  // exactly the header's height, and the quick-lookup input at the bottom
+  // stays hidden behind the keyboard instead of being pushed into view.
+  const headerHeight = useHeaderHeight();
   const [lookupText, setLookupText] = useState("");
   const [submittedText, setSubmittedText] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -126,7 +132,8 @@ export function HomeScreen({ navigation }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
     >
       <View style={styles.content}>
         {metrics?.ready && (metrics.independence || metrics.coverage) ? (
@@ -155,6 +162,7 @@ export function HomeScreen({ navigation }: Props) {
           <Text style={styles.loading}>Loading…</Text>
         ) : (
           <FlatList
+            style={styles.scenarioList}
             data={scenarios ?? []}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
@@ -285,6 +293,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   loading: { ...typography.body, color: colors.textMuted, textAlign: "center", marginTop: spacing.xxxl },
+  // Without an explicit flex, FlatList sizes to its content instead of
+  // filling the remaining column -- which left nothing for
+  // KeyboardAvoidingView to actually shrink, so its bottom padding pushed
+  // the quick-lookup input off-screen below the keyboard instead of
+  // revealing it.
+  scenarioList: { flex: 1 },
   list: { paddingBottom: spacing.xl, gap: spacing.md },
   card: { marginBottom: spacing.md },
   cardRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
