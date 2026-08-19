@@ -1,8 +1,7 @@
-<p align="center">
-  <img src="leena_icon.png" alt="Leena" width="160" />
-</p>
-
-# Leena
+<h1 align="center">
+  <img src="leena_icon.png" alt="" width="48" valign="middle" />
+  Leena
+</h1>
 
 You don't get a second take on the call where you ask your landlord not to
 raise the rent. Leena is where you get twenty.
