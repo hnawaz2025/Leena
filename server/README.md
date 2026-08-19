@@ -353,10 +353,17 @@ growing without bound as a conversation gets longer:
 | `MAX_TRANSCRIPT_TURNS_FOR_ANALYSIS` | 40 | end-of-session analysis |
 | `MAX_DOCUMENT_CHARS_FOR_EXPLANATION` | 6000 | document explanation |
 | `MAX_HISTORY_TURNS_FOR_HELP` | 8 | mid-conversation phrase help |
+| `MAX_DOCUMENT_CHARS_FOR_HELP` | 2000 | photo attached to a phrase lookup |
 
 Analysis numbers the turns it sends so the model can point at specific ones;
 because that's a *slice*, the returned indices are shifted back onto the real
 transcript before anything stores them.
+
+`MAX_DOCUMENT_CHARS_FOR_HELP` is smaller than
+`MAX_DOCUMENT_CHARS_FOR_EXPLANATION` on purpose: `suggestPhrase` uses a
+photographed document to ground one phrase ("name the actual item from the
+menu"), not to summarize the whole thing, so it needs far less of the OCR'd
+text than a full explanation does.
 
 ### Vision
 
@@ -502,7 +509,7 @@ and `POST /users/identify`.
 | `GET` | `/sessions/:id/turns` | full transcript |
 | `POST` | `/sessions/:id/end` | generate checklist (first time) + analysis |
 | `GET` | `/sessions/:id/feedback` | the report, plus cumulative coverage |
-| `POST` | `/help` | "how do I say this" — in-session or standalone |
+| `POST` | `/help` | "how do I say this" — in-session or standalone, optionally grounded in a photo's OCR'd text |
 | `GET` | `/help/phrases` | phrasebook, grouped by keyPhrase |
 | `DELETE` | `/help/phrases?keyPhrase=…` | delete every lookup behind one entry |
 | `POST` | `/help/phrases/practice` | log a speaker-icon tap |

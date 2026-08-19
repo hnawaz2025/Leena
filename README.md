@@ -26,7 +26,10 @@ once, and every debrief is written in it, not translated into it afterward.
 Go blank mid-conversation and "help me say this" gives you the English line
 you need, in the moment — and every phrase you've ever asked for is saved to
 a phrasebook you can revisit and practice out loud on its own, independent
-of any one conversation.
+of any one conversation. Stuck on something in front of you instead — a
+menu, a sign — photograph it and ask your question directly ("help me order
+the first burger"); Leena reads what's actually on the page rather than
+answering generically.
 
 ## How a rehearsal works
 
@@ -35,7 +38,7 @@ flowchart LR
     A["Bring a document\n(lease, letter, notice)"] --> C["Scenario"]
     B["...or describe\nthe situation yourself"] --> C
     C --> D["Persona opens\nthe conversation"]
-    D --> E["You reply\n(stuck? tap 'help me say this')"]
+    D --> E["You reply\n(stuck? tap 'help me say this',\noptionally with a photo attached)"]
     E -. "saved to your\nPhrasebook" .-> P["Phrasebook\n(practice anytime)"]
     E --> F{"Conversation\ndone?"}
     F -- "no, keep going" --> D

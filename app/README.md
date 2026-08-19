@@ -111,6 +111,14 @@ DocumentExplanation  Conversation ──▶ feedback (in-screen, polls
 `DocumentExplanation` prefills the scenario from what was just explained,
 rather than asking the user to redescribe a situation the app already read.
 
+Home's camera button runs one OCR call either way, then asks what to do with
+the result: explain the whole thing (→ `DocumentExplanation`, the path above)
+or attach it as context to a specific question typed or spoken into the
+quick-lookup composer at the bottom of Home (→ `QuickLookupSheet`, not a
+screen navigation). The two diverge only after the photo is read, so asking
+"help me order the first burger" about a photographed menu never pays for a
+document explanation it didn't ask for.
+
 ## State and data
 
 Two different kinds of state are kept deliberately separate:
