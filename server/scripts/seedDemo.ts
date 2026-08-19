@@ -362,6 +362,231 @@ const scenarios: DemoScenario[] = [
       },
     ],
   },
+  // The five scenarios below exist to give Coverage a real "previous" window
+  // to compare against (SCENARIO_WINDOW_SIZE = 4 in routes/metrics.ts, so
+  // the trend needs 8 distinct scenarios total, not 8 sessions). Each gets
+  // one earlier, lower-coverage attempt rather than a full three-session
+  // arc -- they're here to be the *older, less-ready* half of the trend, not
+  // to carry their own narrative the way the three above do.
+  {
+    title: "Renewing my driver's license at the DMV",
+    persona: "A DMV clerk at the counter",
+    checklist: [
+      ["Say which service you need", { Hindi: "बताएं कि आपको कौन सी सेवा चाहिए", Mandarin: "说明你需要哪项服务" }],
+      [
+        "Hand over the right documents",
+        { Hindi: "सही दस्तावेज़ सौंपें", Mandarin: "递交正确的证件" },
+      ],
+      ["Ask how much it costs", { Hindi: "पूछें कि इसका खर्च कितना है", Mandarin: "询问费用是多少" }],
+      [
+        "Ask how long the new one takes to arrive",
+        { Hindi: "पूछें कि नया लाइसेंस आने में कितना समय लगेगा", Mandarin: "询问新证需要多久寄到" },
+      ],
+      ["Ask them to repeat something you missed", { Hindi: "जो समझ नहीं आया उसे दोहराने के लिए कहें", Mandarin: "请对方重复你没听懂的地方" }],
+    ],
+    sessions: [
+      {
+        daysAgo: 52,
+        covered: [0],
+        exchanges: [
+          {
+            agent: "Next. What are you here for today?",
+            user: "License.",
+            help: {
+              native: { Hindi: "मैं अपना ड्राइविंग लाइसेंस नवीनीकृत करने आया हूं", Mandarin: "我是来续驾照的" },
+              suggested: "I'm here to renew my driver's license.",
+              keyPhrase: "i'm here to renew my driver's license",
+            },
+          },
+          {
+            agent: "Do you have your current license and proof of address?",
+            user: "Yes, here.",
+          },
+          {
+            agent: "That'll be forty dollars. How would you like to pay?",
+            user: "I don't know.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Asking my manager for time off",
+    persona: "Priya, your shift supervisor",
+    checklist: [
+      ["Say which dates you need off", { Hindi: "बताएं कि आपको किन तारीखों को छुट्टी चाहिए", Mandarin: "说明你需要哪几天休假" }],
+      ["Explain the reason briefly", { Hindi: "संक्षेप में कारण बताएं", Mandarin: "简单说明原因" }],
+      [
+        "Ask who will cover your shift",
+        { Hindi: "पूछें कि आपकी शिफ्ट कौन संभालेगा", Mandarin: "询问谁会顶替你的班" },
+      ],
+      ["Ask when you'll get an answer", { Hindi: "पूछें कि जवाब कब मिलेगा", Mandarin: "询问何时能得到答复" }],
+      [
+        "Thank them for considering it",
+        { Hindi: "विचार करने के लिए उन्हें धन्यवाद दें", Mandarin: "感谢对方的考虑" },
+      ],
+    ],
+    sessions: [
+      {
+        daysAgo: 47,
+        covered: [0],
+        exchanges: [
+          {
+            agent: "Hey, you wanted to talk to me?",
+            user: "Yes. I need days off.",
+            help: {
+              native: { Hindi: "क्या मैं अगले हफ्ते शुक्रवार और शनिवार को छुट्टी ले सकता हूं", Mandarin: "我下周五和周六能请假吗" },
+              suggested: "Could I take next Friday and Saturday off?",
+              keyPhrase: "could i take next friday and saturday off",
+            },
+          },
+          {
+            agent: "I can probably make that work. What's it for, if you don't mind me asking?",
+            user: "Okay.",
+          },
+          {
+            agent: "No worries either way. Let me check the schedule and get back to you.",
+            user: "Thank you.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Signing up for an ESL class at the community center",
+    persona: "Tom, the community center registrar",
+    checklist: [
+      [
+        "Say you'd like to register for classes",
+        { Hindi: "बताएं कि आप कक्षा में दाखिला लेना चाहते हैं", Mandarin: "说明你想报名上课" },
+      ],
+      ["Ask what levels are offered", { Hindi: "पूछें कि कौन से स्तर उपलब्ध हैं", Mandarin: "询问有哪些级别" }],
+      ["Ask about the class schedule", { Hindi: "कक्षा के समय के बारे में पूछें", Mandarin: "询问上课时间" }],
+      ["Ask if there is a fee", { Hindi: "पूछें कि कोई शुल्क है या नहीं", Mandarin: "询问是否需要费用" }],
+      [
+        "Ask what to bring on the first day",
+        { Hindi: "पूछें कि पहले दिन क्या लाना है", Mandarin: "询问第一天需要带什么" },
+      ],
+    ],
+    sessions: [
+      {
+        daysAgo: 60,
+        covered: [0, 2],
+        exchanges: [
+          {
+            agent: "Hi there, how can I help you today?",
+            user: "I want to join English class.",
+          },
+          {
+            agent: "Great — we have morning and evening sections. Which works better for you?",
+            user: "Evening, please.",
+            help: {
+              native: { Hindi: "शाम की कक्षा मेरे लिए बेहतर रहेगी क्योंकि मैं दिन में काम करता हूं", Mandarin: "晚上的班对我更方便，因为我白天要工作" },
+              suggested: "Evening works better for me since I work during the day.",
+              keyPhrase: "evening works better since i work during the day",
+            },
+          },
+          {
+            agent: "Perfect, evenings it is. Anything else you'd like to know?",
+            user: "Okay.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Talking to a pharmacist about my prescription",
+    persona: "The pharmacist at the counter",
+    checklist: [
+      [
+        "Say you're picking up a prescription",
+        { Hindi: "बताएं कि आप दवा लेने आए हैं", Mandarin: "说明你是来取药的" },
+      ],
+      [
+        "Ask how to take the medication",
+        { Hindi: "पूछें कि दवा कैसे लेनी है", Mandarin: "询问药该怎么吃" },
+      ],
+      ["Ask about side effects", { Hindi: "दुष्प्रभावों के बारे में पूछें", Mandarin: "询问副作用" }],
+      [
+        "Say what other medication you already take",
+        { Hindi: "बताएं कि आप पहले से कौन सी अन्य दवा लेते हैं", Mandarin: "说明你目前在服用的其他药物" },
+      ],
+      ["Ask if it's covered by insurance", { Hindi: "पूछें कि क्या यह बीमा में शामिल है", Mandarin: "询问是否有保险覆盖" }],
+    ],
+    sessions: [
+      {
+        daysAgo: 41,
+        covered: [0],
+        exchanges: [
+          {
+            agent: "Hi, are you picking up today?",
+            user: "Yes.",
+            help: {
+              native: { Hindi: "जी हां, मैं शर्मा के नाम से दवा लेने आया हूं", Mandarin: "是的，我来取Sharma名下的药" },
+              suggested: "Yes, I'm picking up a prescription under the name Sharma.",
+              keyPhrase: "picking up a prescription under the name sharma",
+            },
+          },
+          {
+            agent: "Great, one moment. Do you have any questions about how to take it?",
+            user: "I don't know.",
+          },
+          {
+            agent: "No problem — take one tablet in the morning with food. Anything else today?",
+            user: "Okay, thank you.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Understanding a job application form",
+    persona: "Front-desk staff at the hiring office",
+    checklist: [
+      [
+        "Say you need help with the form",
+        { Hindi: "बताएं कि आपको फॉर्म भरने में मदद चाहिए", Mandarin: "说明你需要填表帮助" },
+      ],
+      [
+        "Point to the section you don't understand",
+        { Hindi: "जो हिस्सा समझ नहीं आया उस ओर इशारा करें", Mandarin: "指出你不理解的部分" },
+      ],
+      [
+        "Ask what a specific term means",
+        { Hindi: "पूछें कि किसी शब्द का मतलब क्या है", Mandarin: "询问某个词是什么意思" },
+      ],
+      [
+        "Ask if you can finish it at home",
+        { Hindi: "पूछें कि क्या आप इसे घर पर पूरा कर सकते हैं", Mandarin: "询问是否可以带回家填完" },
+      ],
+      ["Ask when it's due back", { Hindi: "पूछें कि यह कब तक जमा करना है", Mandarin: "询问截止日期是什么时候" }],
+    ],
+    sessions: [
+      {
+        daysAgo: 36,
+        covered: [0, 1],
+        exchanges: [
+          {
+            agent: "Hi, how can I help?",
+            user: "This form, I don't understand.",
+            help: {
+              native: { Hindi: "क्या आप इस फॉर्म को भरने में मेरी मदद कर सकते हैं", Mandarin: "你能帮我填这张表吗" },
+              suggested: "Could you help me fill out this form?",
+              keyPhrase: "could you help me fill out this form",
+            },
+          },
+          {
+            agent: "Of course — which part is giving you trouble?",
+            user: "This word here.",
+          },
+          {
+            agent: "Ah, that means your most recent employer. Does that make sense?",
+            user: "Yes, thank you.",
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 async function clearDemo(userId: string) {
