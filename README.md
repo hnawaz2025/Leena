@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="leena_icon.png" alt="Leena" width="160" />
+</p>
+
 # Leena
 
 You don't get a second take on the call where you ask your landlord not to
