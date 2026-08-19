@@ -18,6 +18,13 @@ partner for it, lets you run it as many times as you need, and tracks two
 things across every attempt: how much of it you handled on your own, and how
 ready you are for the conversations you said actually matter to you.
 
+Your native language runs through all of it, not just onboarding. Set it
+once, and every debrief is written in it, not translated into it afterward.
+Go blank mid-conversation and "help me say this" gives you the English line
+you need, in the moment — and every phrase you've ever asked for is saved to
+a phrasebook you can revisit and practice out loud on its own, independent
+of any one conversation.
+
 ## How a rehearsal works
 
 ```mermaid
@@ -26,9 +33,10 @@ flowchart LR
     B["...or describe\nthe situation yourself"] --> C
     C --> D["Persona opens\nthe conversation"]
     D --> E["You reply\n(stuck? tap 'help me say this')"]
+    E -. "saved to your\nPhrasebook" .-> P["Phrasebook\n(practice anytime)"]
     E --> F{"Conversation\ndone?"}
     F -- "no, keep going" --> D
-    F -- yes --> G["Bilingual debrief\nin your native language"]
+    F -- yes --> G["Debrief, written in\nyour native language"]
     G --> H["Independence + Coverage\nupdate across attempts"]
     H -. "practice again" .-> D
 ```
@@ -84,9 +92,11 @@ recovery, no multi-device sync. For this audience that trade is correct — a
 locked-out applicant abandoning the app at a password-reset screen is a
 worse outcome than the data-portability gap.
 
-**Every debrief is generated in your native language, not translated after
-the fact.** The model is asked to produce the native-language explanation
-directly, not to translate its own English output — a document explanation
+**Native language is a first-class input, not a locale setting.** It's the
+one thing onboarding asks for, and it shapes every explanation the app
+gives back — document breakdowns, mid-conversation help, end-of-session
+debriefs. All of it is generated directly in that language, never
+translated after the fact from an English draft: a document explanation
 that reads like a machine translated it defeats the purpose for someone
 already worried about being talked down to.
 
