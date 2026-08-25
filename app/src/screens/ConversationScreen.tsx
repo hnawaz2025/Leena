@@ -214,6 +214,18 @@ export function ConversationScreen({ route, navigation }: Props) {
       : []),
   ];
 
+  // onContentSizeChange alone fires while the incoming bubble is still being
+  // laid out, so a long reply scrolls to where the list *was* and lands below
+  // the fold. Re-running it on the next frame, once the thread length or the
+  // pending-reply footer has actually changed, catches the settled size.
+  useEffect(() => {
+    if (threadItems.length === 0) return;
+    const frame = requestAnimationFrame(() =>
+      listRef.current?.scrollToEnd({ animated: true })
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [threadItems.length, sending]);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -335,6 +347,8 @@ export function ConversationScreen({ route, navigation }: Props) {
                 <TextField
                   style={styles.input}
                   placeholder={`Type or speak in ${scenario?.language ?? "English"}…`}
+                  multiline
+                  autoGrow
                   value={input}
                   onChangeText={(next) => {
                     setInput(next);
@@ -431,7 +445,10 @@ const styles = StyleSheet.create({
   helpButtonText: { ...typography.caption, color: colors.primary, fontFamily: typography.bodyBold.fontFamily },
   inputRow: {
     flexDirection: "row",
-    alignItems: "center",
+    // flex-end, not center: once the text box grows to several lines the mic
+    // and send buttons should stay level with the last line, not float in the
+    // middle of a tall box.
+    alignItems: "flex-end",
     padding: spacing.md,
     gap: spacing.sm,
     borderTopWidth: 1,
