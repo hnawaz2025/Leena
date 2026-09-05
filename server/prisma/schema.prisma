@@ -21,15 +21,24 @@ model User {
   phrasePracticeEvents    PhrasePracticeEvent[]
 }
 
+// Deliberately holds no document text.
+//
+// The text of someone's lease, medical letter or immigration notice is the
+// most sensitive thing this app ever touches, and for users who may be
+// undocumented, "we store your paperwork" is not an acceptable answer. The
+// text is sent with the request that needs it, used, and never written down;
+// what persists is only the explanation the user asked for.
+//
+// This row exists to give an explanation something to hang off and to let a
+// scenario record that it came from a document.
 model Document {
-  id            String               @id @default(uuid())
-  userId        String
-  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type          String
-  extractedText String
-  createdAt     DateTime             @default(now())
-  scenarios     Scenario[]
-  explanation   DocumentExplanation?
+  id          String               @id @default(uuid())
+  userId      String
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String
+  createdAt   DateTime             @default(now())
+  scenarios   Scenario[]
+  explanation DocumentExplanation?
 
   @@index([userId])
 }

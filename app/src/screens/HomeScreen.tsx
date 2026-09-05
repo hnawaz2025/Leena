@@ -111,8 +111,12 @@ export function HomeScreen({ navigation }: Props) {
 
   async function explainCapturedDocument(text: string) {
     try {
-      const document = await api.createDocument("other", text);
-      navigation.navigate("DocumentExplanation", { documentId: document.id, documentType: "other" });
+      const document = await api.createDocument("other");
+      navigation.navigate("DocumentExplanation", {
+        documentId: document.id,
+        documentType: "other",
+        text,
+      });
     } catch (e) {
       setCameraError(e instanceof Error ? e.message : "We could not read that photo. Try taking it again in better light.");
     }

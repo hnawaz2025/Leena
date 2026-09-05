@@ -19,10 +19,11 @@ export interface ScenarioDTO {
   createdAt: string;
 }
 
+// No text field on purpose: document contents are never stored server-side,
+// so there is nothing to return. See the Document model in schema.prisma.
 export interface DocumentDTO {
   id: string;
   type: DocumentType;
-  extractedText: string;
   createdAt: string;
 }
 

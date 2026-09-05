@@ -1,10 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react-native";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { ScenarioDTO } from "@leena/shared";
-import { api } from "../api/client";
 import { colors, radius, spacing, typography } from "../theme";
-import { BreathingDot } from "./BreathingDot";
 
 interface ScenarioInfoModalProps {
   visible: boolean;
@@ -13,15 +10,10 @@ interface ScenarioInfoModalProps {
 }
 
 // Lets a returning user (opening a scenario days later, having forgotten the
-// details) check exactly what they told the app and what document they
-// attached, without digging back through Home/ScenarioSetup.
+// details) check exactly what they told the app, without digging back through
+// Home/ScenarioSetup. It no longer fetches the document: there is no stored
+// text to show.
 export function ScenarioInfoModal({ visible, scenario, onClose }: ScenarioInfoModalProps) {
-  const { data: document, isLoading: documentLoading } = useQuery({
-    queryKey: ["document", scenario.documentId],
-    queryFn: () => api.getDocument(scenario.documentId!),
-    enabled: visible && !!scenario.documentId,
-  });
-
   const context = scenario.contextSummary;
 
   return (
@@ -48,14 +40,15 @@ export function ScenarioInfoModal({ visible, scenario, onClose }: ScenarioInfoMo
             <Text style={styles.sectionLabel}>Context for this conversation</Text>
             <Text style={styles.sectionText}>{context}</Text>
 
-            {scenario.documentId && (documentLoading || document?.extractedText) ? (
+            {scenario.documentId ? (
               <>
-                <Text style={styles.sectionLabel}>Document you provided</Text>
-                {documentLoading ? (
-                  <BreathingDot size={16} />
-                ) : (
-                  <Text style={styles.sectionText}>{document!.extractedText}</Text>
-                )}
+                <Text style={styles.sectionLabel}>Built from your document</Text>
+                {/* The text itself isn't shown because it was never stored --
+                    only that a document was used. */}
+                <Text style={styles.sectionText}>
+                  This conversation was based on a document you shared. We used it to write the
+                  practice and did not keep a copy.
+                </Text>
               </>
             ) : null}
           </ScrollView>

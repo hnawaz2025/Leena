@@ -37,7 +37,7 @@ export function DocumentUploadScreen({ navigation }: Props) {
 
   async function ensureSaved(): Promise<string> {
     if (savedDocumentId) return savedDocumentId;
-    const document = await api.createDocument(DOCUMENT_TYPE, text.trim());
+    const document = await api.createDocument(DOCUMENT_TYPE);
     setSavedDocumentId(document.id);
     return document.id;
   }
@@ -51,7 +51,7 @@ export function DocumentUploadScreen({ navigation }: Props) {
     setError(null);
     try {
       const documentId = await ensureSaved();
-      navigation.navigate("ScenarioSetup", { documentId });
+      navigation.navigate("ScenarioSetup", { documentId, documentText: text.trim() });
     } catch (e) {
       setError(e instanceof Error ? e.message : "We could not save your document. Check your internet and try again.");
     } finally {
@@ -68,7 +68,11 @@ export function DocumentUploadScreen({ navigation }: Props) {
     setError(null);
     try {
       const documentId = await ensureSaved();
-      navigation.navigate("DocumentExplanation", { documentId, documentType: DOCUMENT_TYPE });
+      navigation.navigate("DocumentExplanation", {
+        documentId,
+        documentType: DOCUMENT_TYPE,
+        text: text.trim(),
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "We could not save your document. Check your internet and try again.");
     } finally {

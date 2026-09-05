@@ -12,12 +12,11 @@ import { requireUser, type AuthedRequest } from "../middleware/deviceAuth";
 // (see Scenario.documentId), but it doesn't have to.
 export const documentsRouter = Router();
 
-// Client always sends already-extracted plain text -- either typed directly,
-// or produced by POST /extract-from-image below when the user photographs a
-// document instead of pasting it.
+// Creates the record an explanation hangs off. Deliberately takes no text:
+// the document's contents are sent with the request that needs them (see
+// POST /:id/explain) and never written down. See the Document model.
 const createSchema = z.object({
   type: z.enum(["lease", "medical", "job-letter", "other"]),
-  extractedText: z.string().min(1),
 });
 
 documentsRouter.post(
@@ -33,7 +32,6 @@ documentsRouter.post(
       data: {
         userId: req.userId!,
         type: parsed.data.type,
-        extractedText: parsed.data.extractedText,
       },
     });
 
@@ -53,7 +51,6 @@ documentsRouter.get(
     const dto: DocumentDTO = {
       id: document.id,
       type: document.type as DocumentDTO["type"],
-      extractedText: document.extractedText,
       createdAt: document.createdAt.toISOString(),
     };
     res.json(dto);
@@ -108,6 +105,13 @@ const explainQuerySchema = z.object({
   refresh: z.coerce.boolean().default(false),
 });
 
+// The text arrives here and leaves in the explanation -- it is never stored.
+// That is why it travels on the request rather than being looked up: there is
+// nowhere to look it up from.
+const explainBodySchema = z.object({
+  text: z.string().min(1),
+});
+
 // Generates a plain-language explanation of the document, separate from the
 // roleplay/scenario flow -- some users just want to understand a confusing
 // letter, not rehearse a conversation about it. Cached after first
@@ -118,6 +122,9 @@ documentsRouter.post(
   asyncHandler(async (req: AuthedRequest, res) => {
     const parsed = explainQuerySchema.safeParse(req.query);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+    const body = explainBodySchema.safeParse(req.body);
+    if (!body.success) return res.status(400).json({ error: body.error.flatten() });
 
     const document = await prisma.document.findFirst({
       where: { id: req.params.id, userId: req.userId! },
@@ -133,7 +140,7 @@ documentsRouter.post(
     }
 
     const result = await getLLMProvider().explainDocument({
-      documentText: document.extractedText,
+      documentText: body.data.text,
       documentType: document.type,
       nativeLanguage: document.user.nativeLanguage,
     });

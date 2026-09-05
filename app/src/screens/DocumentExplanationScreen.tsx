@@ -14,11 +14,11 @@ type Props = NativeStackScreenProps<RootStackParamList, "DocumentExplanation">;
 // Standalone from the roleplay flow: some users just want to understand a
 // confusing document, not rehearse a conversation about it.
 export function DocumentExplanationScreen({ route, navigation }: Props) {
-  const { documentId } = route.params;
+  const { documentId, text } = route.params;
 
   const { data: explanation, isLoading, error } = useQuery({
     queryKey: ["documentExplanation", documentId],
-    queryFn: () => api.explainDocument(documentId),
+    queryFn: () => api.explainDocument(documentId, text),
   });
 
   if (isLoading) {

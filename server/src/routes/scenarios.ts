@@ -20,6 +20,10 @@ export const scenariosRouter = Router();
 const createSchema = z.object({
   situationType: z.string().min(1),
   documentId: z.string().uuid().optional(),
+  // Sent with the request rather than read from the document row, because the
+  // row holds no text -- see the Document model. Optional: a scenario can be
+  // attached to a document without being grounded in its contents.
+  documentText: z.string().optional(),
 });
 
 function toDTO(scenario: {
@@ -59,13 +63,15 @@ scenariosRouter.post(
 
     const user = await prisma.user.findUniqueOrThrow({ where: { id: req.userId! } });
 
+    // Ownership is still checked, so a scenario can only reference a document
+    // belonging to the caller -- the text just comes from the request now.
     let documentText: string | undefined;
     if (parsed.data.documentId) {
       const document = await prisma.document.findFirst({
         where: { id: parsed.data.documentId, userId: user.id },
       });
       if (!document) return res.status(404).json({ error: "Document not found" });
-      documentText = document.extractedText;
+      documentText = parsed.data.documentText;
     }
 
     const generated = await getLLMProvider().generateScenario({

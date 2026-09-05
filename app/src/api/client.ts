@@ -68,15 +68,18 @@ export const api = {
     return result;
   },
 
-  createDocument: (type: string, extractedText: string) =>
+  // No text: the server keeps none. This just mints the record an
+  // explanation attaches to.
+  createDocument: (type: string) =>
     request<{ id: string; type: string }>("/documents", {
       method: "POST",
-      body: JSON.stringify({ type, extractedText }),
+      body: JSON.stringify({ type }),
     }),
 
-  explainDocument: (documentId: string) =>
+  explainDocument: (documentId: string, text: string) =>
     request<import("@leena/shared").DocumentExplanationDTO>(`/documents/${documentId}/explain`, {
       method: "POST",
+      body: JSON.stringify({ text }),
     }),
 
   extractDocumentImage: (imageBase64: string, mimeType: string) =>
@@ -85,10 +88,10 @@ export const api = {
       body: JSON.stringify({ image: imageBase64, mimeType }),
     }),
 
-  createScenario: (situationType: string, documentId?: string) =>
+  createScenario: (situationType: string, documentId?: string, documentText?: string) =>
     request<import("@leena/shared").ScenarioDTO>("/scenarios", {
       method: "POST",
-      body: JSON.stringify({ situationType, documentId }),
+      body: JSON.stringify({ situationType, documentId, documentText }),
     }),
 
   getScenario: (scenarioId: string) =>

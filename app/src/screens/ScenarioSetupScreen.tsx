@@ -16,6 +16,9 @@ type Props = NativeStackScreenProps<RootStackParamList, "ScenarioSetup">;
 
 export function ScenarioSetupScreen({ route, navigation }: Props) {
   const [documentId, setDocumentId] = useState(route.params?.documentId);
+  // Held in memory only, to ground the generated scenario. The server keeps
+  // no copy of it -- see the Document model.
+  const documentText = route.params?.documentText;
   const [situationNative, setSituationNative] = useState("");
   // Seeded when the user escalates from a quick lookup ("practice a
   // conversation like this") so they don't retype what they just asked about.
@@ -65,7 +68,7 @@ export function ScenarioSetupScreen({ route, navigation }: Props) {
         .filter(Boolean)
         .join("\n");
 
-      const scenario = await api.createScenario(situationType, documentId);
+      const scenario = await api.createScenario(situationType, documentId, documentText);
       await api.createSession(scenario.id);
       navigation.replace("Conversation", { scenarioId: scenario.id });
     } catch (e) {
