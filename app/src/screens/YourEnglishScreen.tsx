@@ -199,7 +199,7 @@ function CoverageDetail({
                 </Text>
               ))
             ) : (
-              <Text style={styles.quote}>Nothing left to practise here.</Text>
+              <Text style={styles.quote}>You are ready for this one.</Text>
             )}
           </View>
         </Pressable>
@@ -230,7 +230,7 @@ export function YourEnglishScreen({ navigation }: Props) {
       <View style={styles.center}>
         <EmptyState
           icon={LineChart}
-          message="Practise a couple more conversations and your progress will show up here."
+          message="Finish 2 more conversations and your progress will appear here."
         />
       </View>
     );

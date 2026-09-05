@@ -49,7 +49,7 @@ export function ScenarioSetupScreen({ route, navigation }: Props) {
 
   async function handleStart() {
     if (!situationNative.trim() && !situationEnglish.trim()) {
-      setError("Describe the situation you want to practice, in either language.");
+      setError("Please write what you want to practice. You can use either language.");
       return;
     }
     setLoading(true);
@@ -69,7 +69,7 @@ export function ScenarioSetupScreen({ route, navigation }: Props) {
       await api.createSession(scenario.id);
       navigation.replace("Conversation", { scenarioId: scenario.id });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(e instanceof Error ? e.message : "We could not build your practice. Check your internet and try again.");
     } finally {
       setLoading(false);
     }
@@ -77,7 +77,7 @@ export function ScenarioSetupScreen({ route, navigation }: Props) {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>What are you preparing for?</Text>
+      <Text style={styles.title}>What do you need to talk about?</Text>
 
       {documentId ? (
         <View style={styles.documentBadge}>
@@ -122,7 +122,7 @@ export function ScenarioSetupScreen({ route, navigation }: Props) {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Button label="Let's rehearse this" onPress={handleStart} loading={loading} style={styles.button} />
+      <Button label="Start practising" onPress={handleStart} loading={loading} style={styles.button} />
     </ScrollView>
   );
 }

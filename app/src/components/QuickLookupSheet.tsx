@@ -51,7 +51,7 @@ export function QuickLookupSheet({
         Speech.speak(r.suggestedText, { language: "en-US" });
       })
       .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Something went wrong");
+        if (!cancelled) setError(e instanceof Error ? e.message : "We could not translate that. Check your internet and try again.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

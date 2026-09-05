@@ -92,7 +92,7 @@ export function PhrasebookScreen({}: Props) {
       <View style={styles.center}>
         <EmptyState
           icon={BookOpen}
-          message="Nothing yet — every time you ask how to say something, it lands here."
+          message="No phrases yet. Every time you ask how to say something, we save it here for you."
         />
       </View>
     );

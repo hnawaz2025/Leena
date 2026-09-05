@@ -170,7 +170,7 @@ export function ConversationScreen({ route, navigation }: Props) {
       await queryClient.invalidateQueries({ queryKey: ["scenario-sessions", scenarioId] });
       setTab("feedback");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(e instanceof Error ? e.message : "We could not finish your conversation. It is still saved. Tap Finish to try again.");
     } finally {
       setEnding(false);
     }
@@ -314,7 +314,7 @@ export function ConversationScreen({ route, navigation }: Props) {
               return <ChatBubble text={item.turn.text} speaker={item.turn.speaker} />;
             }}
             ListEmptyComponent={
-              <Text style={styles.empty}>Say something to start the conversation.</Text>
+              <Text style={styles.empty}>Type or say hello to begin.</Text>
             }
             ListFooterComponent={sending ? <BreathingDot /> : null}
           />
@@ -338,7 +338,7 @@ export function ConversationScreen({ route, navigation }: Props) {
               ) : (
                 <Pressable style={styles.helpButton} onPress={() => setHelpPanelOpen(true)}>
                   <Languages size={14} color={colors.primary} strokeWidth={2.5} />
-                  <Text style={styles.helpButtonText}>Stuck? Help me say this</Text>
+                  <Text style={styles.helpButtonText}>Help me say this</Text>
                 </Pressable>
               )}
 
@@ -372,7 +372,7 @@ export function ConversationScreen({ route, navigation }: Props) {
 
               <Pressable style={styles.endButton} onPress={handleEnd} disabled={ending}>
                 <Text style={styles.endButtonText}>
-                  {ending ? "Wrapping up…" : "End conversation & get feedback"}
+                  {ending ? "Finishing…" : "Finish and see my feedback"}
                 </Text>
               </Pressable>
             </>
@@ -383,7 +383,7 @@ export function ConversationScreen({ route, navigation }: Props) {
               disabled={startingAgain}
             >
               <Text style={styles.practiceAgainText}>
-                {startingAgain ? "Starting…" : "Practice this again"}
+                {startingAgain ? "Starting your next practice…" : "Practice this again"}
               </Text>
             </Pressable>
           ) : null}

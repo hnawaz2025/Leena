@@ -58,7 +58,7 @@ export function HelpMeSayThisPanel({
       const result = await api.requestHelpPhrase(nativeText.trim(), nativeLanguage, sessionId);
       setSuggestion({ eventId: result.id, suggestedText: result.suggestedText });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(e instanceof Error ? e.message : "We could not translate that. Check your internet and tap Translate again.");
     } finally {
       setLoading(false);
     }
@@ -133,7 +133,7 @@ export function HelpMeSayThisPanel({
               <RotateCcw size={14} color={colors.textSecondary} strokeWidth={2} />
               <Text style={styles.tryAgainText}>Try again</Text>
             </Pressable>
-            <Button label="Use this" onPress={handleUse} style={styles.useButton} />
+            <Button label="Put this in my message" onPress={handleUse} style={styles.useButton} />
           </View>
         </>
       )}

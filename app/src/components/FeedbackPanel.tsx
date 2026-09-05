@@ -136,7 +136,7 @@ export function FeedbackPanel({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Nice work — here's what to sharpen</Text>
+      <Text style={styles.title}>Nice work. Here is what to practise next time.</Text>
 
       {nativeLanguage ? (
         <View style={styles.langToggleRow}>
@@ -146,7 +146,7 @@ export function FeedbackPanel({
       ) : null}
 
       <Card accentColor={colors.secondary} style={styles.recapCard}>
-        <Text style={styles.recapLabel}>Before your real conversation</Text>
+        <Text style={styles.recapLabel}>Remember this for the real conversation</Text>
         <Text style={styles.recapText}>{conversationSummary}</Text>
       </Card>
 
@@ -167,7 +167,7 @@ export function FeedbackPanel({
 
           {remainingItems.length > 0 ? (
             <>
-              <Text style={styles.sectionTitle}>Also worth practising</Text>
+              <Text style={styles.sectionTitle}>Practice these next time</Text>
               {remainingItems.map((item) => (
                 <View key={item.index} style={styles.checkRow}>
                   <Circle size={16} color={colors.textMuted} strokeWidth={2} />
@@ -186,7 +186,7 @@ export function FeedbackPanel({
         </Text>
       </View>
 
-      <Text style={styles.sectionTitle}>Vocabulary to learn</Text>
+      <Text style={styles.sectionTitle}>New words to learn</Text>
       {feedback.vocabularySuggestions.map((v, i) => (
         <View key={i} style={styles.vocabItem}>
           <Text style={styles.vocabTerm}>{v.term}</Text>

@@ -114,7 +114,7 @@ export function HomeScreen({ navigation }: Props) {
       const document = await api.createDocument("other", text);
       navigation.navigate("DocumentExplanation", { documentId: document.id, documentType: "other" });
     } catch (e) {
-      setCameraError(e instanceof Error ? e.message : "Something went wrong");
+      setCameraError(e instanceof Error ? e.message : "We could not read that photo. Try taking it again in better light.");
     }
   }
 
@@ -152,14 +152,14 @@ export function HomeScreen({ navigation }: Props) {
           style={styles.rehearseButtonTop}
           onPress={() => navigation.navigate("ScenarioSetup", undefined)}
         >
-          <Text style={styles.rehearseText}>Rehearse a conversation</Text>
+          <Text style={styles.rehearseText}>Practice a conversation</Text>
           <ArrowRight size={14} color={colors.primary} strokeWidth={2.5} />
         </Pressable>
 
         <Text style={styles.sectionLabel}>Your practice</Text>
 
         {isLoading ? (
-          <Text style={styles.loading}>Loading…</Text>
+          <Text style={styles.loading}>Loading your practice…</Text>
         ) : (
           <FlatList
             style={styles.scenarioList}
@@ -169,7 +169,7 @@ export function HomeScreen({ navigation }: Props) {
             ListEmptyComponent={
               <EmptyState
                 icon={Sprout}
-                message="Nothing here yet — ask me how to say something below, or rehearse a whole conversation."
+                message="Nothing here yet. Type below to ask how to say something in English. Or tap Practice a conversation to get ready for a real one."
               />
             }
             renderItem={({ item, index }) => (

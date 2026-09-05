@@ -53,7 +53,7 @@ export function DocumentUploadScreen({ navigation }: Props) {
       const documentId = await ensureSaved();
       navigation.navigate("ScenarioSetup", { documentId });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(e instanceof Error ? e.message : "We could not save your document. Check your internet and try again.");
     } finally {
       setLoading(null);
     }
@@ -70,7 +70,7 @@ export function DocumentUploadScreen({ navigation }: Props) {
       const documentId = await ensureSaved();
       navigation.navigate("DocumentExplanation", { documentId, documentType: DOCUMENT_TYPE });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(e instanceof Error ? e.message : "We could not save your document. Check your internet and try again.");
     } finally {
       setLoading(null);
     }
@@ -116,7 +116,7 @@ export function DocumentUploadScreen({ navigation }: Props) {
               <Text style={styles.scanningText}>Reading document…</Text>
             </View>
           ) : (
-            <Text style={styles.scanningText}>Text extracted below — check it over.</Text>
+            <Text style={styles.scanningText}>Here are the words we found. Please read them and fix any mistakes.</Text>
           )}
         </View>
       ) : null}
@@ -146,7 +146,7 @@ export function DocumentUploadScreen({ navigation }: Props) {
         style={styles.button}
       />
       <Button
-        label="Just explain it to me"
+        label="Explain this to me"
         variant="secondary"
         onPress={handleExplainInstead}
         loading={loading === "explain"}
@@ -154,7 +154,7 @@ export function DocumentUploadScreen({ navigation }: Props) {
         style={styles.button}
       />
       <Button
-        label="Skip for now"
+        label="Continue without a document"
         variant="secondary"
         onPress={() => navigation.navigate("ScenarioSetup", undefined)}
       />

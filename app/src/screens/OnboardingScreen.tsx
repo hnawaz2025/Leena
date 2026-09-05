@@ -22,7 +22,7 @@ export function OnboardingScreen({ navigation }: Props) {
 
   async function handleContinue() {
     if (!nativeLanguage) {
-      setError("Tell us your native language first.");
+      setError("Please choose your language.");
       return;
     }
     setLoading(true);
@@ -32,7 +32,7 @@ export function OnboardingScreen({ navigation }: Props) {
       setProfile(nativeLanguage, "English");
       navigation.replace("Home");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError(e instanceof Error ? e.message : "We could not connect. Check your internet and try again.");
     } finally {
       setLoading(false);
     }

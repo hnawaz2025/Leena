@@ -40,7 +40,7 @@ export function DocumentExplanationScreen({ route, navigation }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Here's what this means</Text>
+      <Text style={styles.title}>What this document says</Text>
       <Text style={styles.summary}>{explanation.summary}</Text>
 
       {explanation.actionItems.length > 0 ? (
@@ -60,7 +60,7 @@ export function DocumentExplanationScreen({ route, navigation }: Props) {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <BookOpen size={16} color={colors.secondary} strokeWidth={2} />
-          <Text style={styles.sectionTitle}>Confusing terms, explained</Text>
+          <Text style={styles.sectionTitle}>Difficult words</Text>
         </View>
         {explanation.keyTerms.map((kt, i) => (
           <View key={i} style={styles.termItem}>
