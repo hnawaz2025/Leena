@@ -13,9 +13,10 @@
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "prisma generate && tsc -p tsconfig.json",
-    "start": "prisma db push --skip-generate && node dist/index.js",
+    "start": "npm run schema:fixups && prisma db push --skip-generate && node dist/index.js",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "schema:fixups": "prisma db execute --schema prisma/schema.prisma --file prisma/fixups.sql"
   },
   "dependencies": {
     "@leena/shared": "*",
