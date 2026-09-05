@@ -27,12 +27,18 @@ export function getLLMProvider(): LLMProvider {
     case "openai": {
       const apiKey = process.env.OPENAI_API_KEY;
       if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
+      const openaiModel = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+      // Logged at boot because a misconfigured provider is otherwise invisible
+      // from outside: errorHandler deliberately replaces the upstream message,
+      // so "which vendor is this deploy actually talking to" can only be
+      // answered from the logs. Never logs the key.
+      console.log(`LLM provider: openai (model ${openaiModel})`);
       llmProvider = new OpenAICompatibleLLMProvider({
         apiKey,
-        model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+        model: openaiModel,
         // Same family, and it reads photographed documents, so there is no
         // reason to run a second vendor just for vision.
-        visionModel: process.env.OPENAI_VISION_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+        visionModel: process.env.OPENAI_VISION_MODEL ?? openaiModel,
         jsonMode: true,
       });
       return llmProvider;
@@ -45,6 +51,7 @@ export function getLLMProvider(): LLMProvider {
       const model = process.env.FEATHERLESS_MODEL;
       if (!apiKey) throw new Error("FEATHERLESS_API_KEY is not set");
       if (!model) throw new Error("FEATHERLESS_MODEL is not set");
+      console.log(`LLM provider: featherless (model ${model})`);
       llmProvider = new OpenAICompatibleLLMProvider({
         apiKey,
         model,
