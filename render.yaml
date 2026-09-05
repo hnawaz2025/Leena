@@ -60,3 +60,34 @@ services:
         sync: false
       - key: RENDER_WORKFLOW_TASK_SLUG
         sync: false
+
+  # The Expo web build of the app, served as static files. Worth having beyond
+  # convenience: a student can open a link instead of installing Expo Go and
+  # scanning a QR, which for an audience that skews older and less
+  # smartphone-confident removes the most likely point of failure in a pilot.
+  #
+  # Static sites also do not spin down on the free plan, unlike the API above,
+  # so the page itself is always instant even when the first API call has to
+  # wake the server.
+  - type: web
+    name: leena-app
+    runtime: static
+    rootDir: app
+    # cd .. first: this is an npm workspace, so dependencies hoist to the repo
+    # root and installing from inside app/ alone would miss them.
+    buildCommand: cd .. && npm ci && cd app && npx expo export --platform web
+    staticPublishPath: ./dist
+    envVars:
+      # Baked into the bundle at build time, not read at runtime -- changing it
+      # requires a rebuild, not a restart. Hardcoded rather than derived from
+      # the service above because fromService yields a bare host with no
+      # scheme, and the client needs a full origin.
+      - key: EXPO_PUBLIC_API_BASE_URL
+        value: https://leena-server.onrender.com
+    routes:
+      # Client-side routing: React Navigation owns the URL after load, so every
+      # path has to be served the same index.html or a refresh on any screen
+      # other than the root 404s.
+      - type: rewrite
+        source: /*
+        destination: /index.html
