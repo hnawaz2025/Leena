@@ -10,11 +10,13 @@ import { z } from "zod";
 const baseSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   PORT: z.string().optional(),
-  AI_LLM_PROVIDER: z.enum(["featherless"]).default("featherless"),
+  AI_LLM_PROVIDER: z.enum(["openai", "featherless"]).default("openai"),
   AI_SPEECH_PROVIDER: z.enum(["openai"]).default("openai"),
   OPENAI_API_KEY: z.string().optional(),
   FEATHERLESS_API_KEY: z.string().optional(),
   FEATHERLESS_MODEL: z.string().optional(),
+  OPENAI_MODEL: z.string().optional(),
+  OPENAI_VISION_MODEL: z.string().optional(),
   // Both optional and unvalidated together on purpose: session analysis
   // works in-process with neither set. When both are present, POST
   // /sessions/:id/end dispatches to the Render Workflow instead -- a
@@ -40,6 +42,13 @@ const envSchema = baseSchema.superRefine((env, ctx) => {
           "FEATHERLESS_MODEL is required when AI_LLM_PROVIDER=featherless (e.g. a DeepSeek model id from your Featherless dashboard). Check that model's concurrency-unit cost before using it in a live demo.",
       });
     }
+  }
+  if (env.AI_LLM_PROVIDER === "openai" && !env.OPENAI_API_KEY) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["OPENAI_API_KEY"],
+      message: "OPENAI_API_KEY is required when AI_LLM_PROVIDER=openai",
+    });
   }
   if (env.AI_SPEECH_PROVIDER === "openai" && !env.OPENAI_API_KEY) {
     ctx.addIssue({

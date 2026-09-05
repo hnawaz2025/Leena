@@ -1,4 +1,4 @@
-import { FeatherlessLLMProvider } from "./providers/featherlessLLMProvider";
+import { OpenAICompatibleLLMProvider } from "./providers/openAICompatibleLLMProvider";
 import { OpenAISpeechProvider } from "./providers/openaiSpeechProvider";
 import type { LLMProvider, SpeechProvider } from "./types";
 
@@ -19,16 +19,41 @@ let speechProvider: SpeechProvider | null = null;
 export function getLLMProvider(): LLMProvider {
   if (llmProvider) return llmProvider;
 
-  const providerName = process.env.AI_LLM_PROVIDER ?? "featherless";
+  const providerName = process.env.AI_LLM_PROVIDER ?? "openai";
   switch (providerName) {
+    // OpenAI directly. Its JSON mode is enabled, which removes the "returned
+    // prose instead of JSON" failure class outright -- the open-weight
+    // proxies could not offer that.
+    case "openai": {
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
+      llmProvider = new OpenAICompatibleLLMProvider({
+        apiKey,
+        model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+        // Same family, and it reads photographed documents, so there is no
+        // reason to run a second vendor just for vision.
+        visionModel: process.env.OPENAI_VISION_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+        jsonMode: true,
+      });
+      return llmProvider;
+    }
+
+    // Kept because it costs almost nothing to keep: the same class with a
+    // different base URL. No JSON mode -- most proxies do not implement it.
     case "featherless": {
       const apiKey = process.env.FEATHERLESS_API_KEY;
       const model = process.env.FEATHERLESS_MODEL;
       if (!apiKey) throw new Error("FEATHERLESS_API_KEY is not set");
       if (!model) throw new Error("FEATHERLESS_MODEL is not set");
-      llmProvider = new FeatherlessLLMProvider(apiKey, model);
+      llmProvider = new OpenAICompatibleLLMProvider({
+        apiKey,
+        model,
+        visionModel: process.env.FEATHERLESS_VISION_MODEL ?? "Qwen/Qwen3-VL-8B-Instruct",
+        baseURL: "https://api.featherless.ai/v1",
+      });
       return llmProvider;
     }
+
     default:
       throw new Error(`Unknown AI_LLM_PROVIDER: ${providerName}`);
   }

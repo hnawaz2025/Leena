@@ -38,21 +38,14 @@ const MAX_HISTORY_TURNS_FOR_HELP = 8;
 // letter only needs to be legible enough to answer a specific question.
 const MAX_DOCUMENT_CHARS_FOR_HELP = 2000;
 
-// The main FEATHERLESS_MODEL (e.g. GLM-4-9B-0414) is text-only. Document
-// photo capture needs actual vision, so this is a separate, dedicated model
-// rather than something the .env config controls -- Qwen3-VL-8B-Instruct
-// was tested directly against a synthetic document image and transcribed it
-// near-perfectly; "Instruct" (not "Thinking") avoids the reasoning-leak
-// problem seen with other small reasoning models on this platform.
-const VISION_MODEL = "Qwen/Qwen3-VL-8B-Instruct";
-
-// Featherless (https://featherless.ai) proxies 40,000+ open-weight models
-// (DeepSeek, Kimi, GLM, GPT-OSS, ...) behind an OpenAI-compatible API. The
-// exact model id (e.g. "deepseek-ai/DeepSeek-R1-0528") and its concurrency
-// cost are chosen by FEATHERLESS_MODEL rather than hardcoded here, since
-// larger models consume more of the plan's limited concurrent request units
-// -- check the model's page on Featherless's dashboard before picking one for
-// a live demo.
+// One implementation, several vendors. OpenAI's wire protocol is the de facto
+// standard and Featherless (and most proxies) speak it, so the difference
+// between backends is a base URL and a model id -- not a second class. That
+// matters here because the prompts are the expensive, carefully-tuned part of
+// this file; duplicating them per vendor is how they drift apart.
+//
+// Document photo capture needs a vision-capable model, which is not always
+// the same model used for text, so it is configured separately.
 // The SDK defaults to a ten-minute timeout and two retries, so a stuck call
 // could occupy a request for half an hour. These are sized off measured
 // behaviour instead: the slowest call in the app is analyzeSession at ~29s,
@@ -66,18 +59,44 @@ const VISION_MODEL = "Qwen/Qwen3-VL-8B-Instruct";
 const LLM_TIMEOUT_MS = 90_000;
 const LLM_MAX_RETRIES = 1;
 
-export class FeatherlessLLMProvider implements LLMProvider {
+export interface OpenAICompatibleConfig {
+  apiKey: string;
+  /** Model used for every text call. */
+  model: string;
+  /** Model used for reading a photo of a document. May be the same one. */
+  visionModel: string;
+  /** Omit for OpenAI itself; set for a compatible proxy such as Featherless. */
+  baseURL?: string;
+  /**
+   * Ask the API to guarantee syntactically valid JSON. OpenAI supports this;
+   * most proxies do not, so it is opt-in. It removes the "returned prose
+   * instead of JSON" failure entirely, but not schema mistakes -- callForJson
+   * still validates and still retries.
+   */
+  jsonMode?: boolean;
+}
+
+export class OpenAICompatibleLLMProvider implements LLMProvider {
   private client: OpenAI;
   private model: string;
+  private visionModel: string;
+  private jsonMode: boolean;
 
-  constructor(apiKey: string, model: string) {
+  constructor(config: OpenAICompatibleConfig) {
     this.client = new OpenAI({
-      apiKey,
-      baseURL: "https://api.featherless.ai/v1",
+      apiKey: config.apiKey,
+      baseURL: config.baseURL,
       timeout: LLM_TIMEOUT_MS,
       maxRetries: LLM_MAX_RETRIES,
     });
-    this.model = model;
+    this.model = config.model;
+    this.visionModel = config.visionModel;
+    this.jsonMode = config.jsonMode ?? false;
+  }
+
+  /** Spread into a chat call that must return JSON. No-op unless enabled. */
+  private get jsonFormat() {
+    return this.jsonMode ? ({ response_format: { type: "json_object" } } as const) : {};
   }
 
   async generateScenario(input: GenerateScenarioInput): Promise<GeneratedScenario> {
@@ -91,7 +110,7 @@ You must invent a persona for the OTHER party in the conversation: the specific 
 needs to talk to (e.g. the landlord, the doctor, the DMV clerk, the USCIS officer) -- never someone
 in the same role as the user (never another tenant, another patient, another applicant).
 
-Return ONLY a JSON object with keys: title, personaDescription (who the AI will roleplay as -- the other party, e.g. "a landlord named Mr. Chen" or "a doctor named Dr. Patel", never a role matching the user's own), contextSummary (2-3 sentences of situational context, referring to the person practicing as "the user" -- never as "the immigrant"), openingLine (what the persona says first, in ${input.targetLanguage}), keyVocabulary (array of 5-8 useful words/phrases in ${input.targetLanguage}).
+Return ONLY a JSON object with keys: title, personaDescription (who the AI will roleplay as -- the other party, e.g. "a landlord named Mr. Chen" or "a doctor named Dr. Patel", never a role matching the user's own), contextSummary (2-3 sentences of situational context, referring to the person practicing as "the user" -- never as "the immigrant"), openingLine (the FIRST words the PERSONA speaks to the user, in ${input.targetLanguage}. The persona is the one greeting or receiving the user -- "Good morning, how can I help you?", "Thanks for calling, what can I do for you?". It must NEVER be the user's own words and must never describe the user's problem: a landlord does not say "the heating in my apartment is broken", the tenant does), keyVocabulary (array of 5-8 useful words/phrases in ${input.targetLanguage}).
 ${correctionNote ? `\n${correctionNote}` : ""}`;
 
     return callForJson(
@@ -99,6 +118,7 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
       async (correctionNote) => {
         const response = await this.client.chat.completions.create({
           model: this.model,
+          ...this.jsonFormat,
           max_tokens: 1024,
           messages: [{ role: "user", content: buildPrompt(correctionNote) }],
         });
@@ -175,6 +195,7 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
       async (correctionNote) => {
         const response = await this.client.chat.completions.create({
           model: this.model,
+          ...this.jsonFormat,
           max_tokens: 1024,
           messages: [{ role: "user", content: buildPrompt(correctionNote) }],
         });
@@ -233,6 +254,7 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
       async (correctionNote) => {
         const response = await this.client.chat.completions.create({
           model: this.model,
+          ...this.jsonFormat,
           max_tokens: 2048,
           messages: [{ role: "user", content: buildPrompt(correctionNote) }],
         });
@@ -305,6 +327,7 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
       async (correctionNote) => {
         const response = await this.client.chat.completions.create({
           model: this.model,
+          ...this.jsonFormat,
           max_tokens: 1536,
           messages: [{ role: "user", content: buildPrompt(correctionNote) }],
         });
@@ -327,7 +350,7 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
     const base64Image = input.image.toString("base64");
 
     const response = await this.client.chat.completions.create({
-      model: VISION_MODEL,
+      model: this.visionModel,
       max_tokens: 2048,
       messages: [
         {
@@ -412,6 +435,7 @@ ${correctionNote ? `\n${correctionNote}` : ""}`;
       async (correctionNote) => {
         const response = await this.client.chat.completions.create({
           model: this.model,
+          ...this.jsonFormat,
           max_tokens: 400,
           messages: [{ role: "user", content: buildPrompt(correctionNote) }],
         });

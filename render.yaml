@@ -40,11 +40,12 @@ services:
           name: leena-db
           property: connectionString
       - key: AI_LLM_PROVIDER
-        value: featherless
-      # GLM-4-9B returned 503 capacity_exhausted for extended stretches during
-      # development; Qwen2.5-7B produced garbled Hindi and out-of-range
-      # indices; Mistral-7B returned unusable output. DeepSeek-V3 is the one
-      # that held up. See server/README.md.
+        value: openai
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      # Featherless is still supported (same provider class, different base
+      # URL) but unused: the hackathon plan that paid for it has ended. Set
+      # AI_LLM_PROVIDER=featherless and these two to switch back.
       - key: FEATHERLESS_MODEL
         value: deepseek-ai/DeepSeek-V3-0324
       - key: FEATHERLESS_API_KEY

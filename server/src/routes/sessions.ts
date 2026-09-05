@@ -155,7 +155,7 @@ sessionsRouter.post(
     // be persisted to work.
     //
     // chatTurn internally caps how much of this history it actually sends to
-    // the model (see MAX_HISTORY_TURNS_FOR_CHAT in featherlessLLMProvider.ts)
+    // the model (see MAX_HISTORY_TURNS_FOR_CHAT in openAICompatibleLLMProvider.ts)
     // so cost/context-window usage doesn't grow unbounded with session length.
     const result = await getLLMProvider().chatTurn({
       personaDescription: session.scenario.personaDescription,

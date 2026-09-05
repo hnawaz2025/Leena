@@ -67,27 +67,39 @@ real request.
 | --- | --- | --- |
 | `DATABASE_URL` | yes | Postgres connection string |
 | `PORT` | no | defaults to `4000` |
-| `AI_LLM_PROVIDER` | no | only `featherless`; defaults to it |
+| `AI_LLM_PROVIDER` | no | `openai` (default) or `featherless` |
+| `OPENAI_MODEL` | no | defaults to `gpt-4o-mini` |
+| `OPENAI_VISION_MODEL` | no | defaults to `OPENAI_MODEL` |
 | `FEATHERLESS_API_KEY` | when provider is featherless | |
 | `FEATHERLESS_MODEL` | when provider is featherless | model id, e.g. `deepseek-ai/DeepSeek-V3-0324` |
 | `AI_SPEECH_PROVIDER` | no | only `openai`; defaults to it |
-| `OPENAI_API_KEY` | when speech provider is openai | Whisper transcription only |
+| `OPENAI_API_KEY` | when provider or speech is openai | LLM calls and Whisper transcription |
 
-**Choosing `FEATHERLESS_MODEL` is a real decision, not a formality.** Featherless
-proxies 40,000+ open-weight models behind an OpenAI-compatible API, and they
-differ enormously at the two things this service actually needs: emitting
-valid JSON, and writing fluent non-English text. Models observed in practice:
+**On providers.** There is one provider class,
+[`OpenAICompatibleLLMProvider`](src/ai/providers/openAICompatibleLLMProvider.ts),
+not one per vendor. OpenAI's wire protocol is the de facto standard and the
+proxies speak it, so a backend is a base URL and a model id. The prompts are
+the expensive, carefully-tuned part of that file, and duplicating them per
+vendor is how they drift apart.
 
-- `deepseek-ai/DeepSeek-V3-0324` — current default. Reliable JSON, fluent
-  Hindi/Mandarin. Larger, so it costs more concurrency units.
-- `zai-org/GLM-4-9B-0414` — previous default, good quality, but has hit
-  `503 capacity_exhausted` for extended stretches.
-- `Qwen/Qwen2.5-7B-Instruct` — runs, but produced garbled Hindi and
-  repeatedly returned out-of-range checklist indices.
-- `mistralai/Mistral-7B-Instruct-v0.3` — returned pure garbage tokens. Unusable.
+`openai` is the default. Its JSON mode is enabled, which removes the "returned
+prose instead of JSON" failure class outright — `callForJson` still validates
+and retries, but only against schema mistakes now, not syntax.
 
-Check a model's concurrency-unit cost on the Featherless dashboard before
-using it for a live demo.
+`featherless` still works and is one env var away. It was the original backend
+because a hackathon plan paid for it; that plan ended. Models observed there,
+kept as a record of how much this choice matters:
+
+- `deepseek-ai/DeepSeek-V3-0324` — the one that held up.
+- `zai-org/GLM-4-9B-0414` — good, but returned `503 capacity_exhausted` for
+  extended stretches.
+- `Qwen/Qwen2.5-7B-Instruct` — garbled Hindi, repeatedly returned
+  out-of-range checklist indices.
+- `mistralai/Mistral-7B-Instruct-v0.3` — pure garbage tokens. Unusable.
+
+**Cost changed with the vendor.** Featherless was flat-rate; OpenAI bills per
+token. A single rehearsed conversation is roughly 27 model calls, so pick the
+model with that in mind and watch the first few days of real usage.
 
 > **Shell gotcha:** if `OPENAI_API_KEY` is exported in your shell profile it
 > shadows the one in `.env` (dotenv does not override existing env vars).
@@ -198,7 +210,7 @@ src/
     schemas.ts          zod schema per structured LLM response
     jsonRetry.ts        JSON extraction, retry, script-contamination guard
     providers/
-      featherlessLLMProvider.ts   every prompt in the app lives here
+      openAICompatibleLLMProvider.ts   every prompt in the app lives here
       openaiSpeechProvider.ts     Whisper transcription
 
   metrics/              pure functions, no I/O
@@ -344,7 +356,7 @@ to be told it failed.
 
 ### Truncation limits
 
-All in `featherlessLLMProvider.ts`, all there to stop prompt size and cost
+All in `openAICompatibleLLMProvider.ts`, all there to stop prompt size and cost
 growing without bound as a conversation gets longer:
 
 | Constant | Value | Applies to |
